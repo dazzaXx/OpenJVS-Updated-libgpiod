@@ -26,13 +26,41 @@ Installation is done from the git repository as follows:
 
 ```
 sudo apt install build-essential cmake git file libgpiod-dev
-git clone https://github.com/dazzaXx/openjvs
+git clone https://github.com/dazzaXx/OpenJVS-Updated-libgpiod
 make
 sudo make install
 ```
 
-## Guides
+On games that require a sense line, the following has to be wired up:
 
-- [Manual & Detailed Hat Guide](docs/OpenJVS_IO_Manual_1.2.pdf)
-- [Software Guide](docs/guide.md) 
-- [Hat Quickstart Guide](docs/hat-quickstart.md)
+```
+
+|          GND   (BLACK) |-------------| GND           |                 |                        |
+| ARCADE   A+    (GREEN) |-------------| A+  RS485 USB |-----------------| USB  RASPBERRY PI > 1  |
+|          B-    (WHITE) |-------------| B-            |                 |                        |
+|                        |                                               |                        |
+|          SENSE (RED)   |----------+------------------------------------| GPIO 12                |
+                                    |
+                                    +---- (1kOhm Resistor or 4 Signal Diodes) ---- GND
+```
+
+A 1KOhm resistor or 4 signal diodes are known to work properly, the purpose of these is to create a 2.5 volt drop.
+
+> Warning: A 1KOhm resistor will not work with the Triforce system, please use the 4 signal diodes for this purpose.
+
+When buying a USB to RS485 dongle be sure to buy one with an FTDI chip inside. The CP2102 and other chips have been found to not work well.
+
+I have tested CH340E USB RS485 converters personally and they work. ~dazzaXx
+
+## Configuration
+
+OpenJVS can be configured using the following command:
+```
+sudo nano /etc/openjvs/config
+```
+Check the /etc/openjvs/ios folder to see which I/O boards can be emulated and input the name of it on the EMULATE line.
+
+##
+
+Make sure to check the original guide.md in the docs folder to find out how to configure it in more detail.
+
