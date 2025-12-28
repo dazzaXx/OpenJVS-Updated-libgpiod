@@ -23,7 +23,7 @@ Questions can be asked in the discord channel: https://arcade.community. If it a
 Installation is done from the git repository as follows:
 
 ```
-sudo apt install build-essential cmake git file
+sudo apt install build-essential cmake git file libgpiod-dev
 git clone https://github.com/openjvs/openjvs
 make
 sudo make install
