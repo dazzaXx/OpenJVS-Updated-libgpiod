@@ -268,7 +268,7 @@ void cleanup()
 
 void handleSignal(int signal)
 {
-    if (signal == 2)
+    if (signal == SIGINT)
     {
         debug(0, "\nOpenJVS is stopping...\n");
         running = -1;
