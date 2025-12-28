@@ -6,6 +6,23 @@
 
 #define GPIO_CHIP_NUMBER 0
 #define GPIO_CONSUMER_NAME "openjvs"
+
+#ifdef GPIOD_API_V2
+// libgpiod v2 API - we need to keep track of line requests per pin
+// Note: This implementation assumes single-threaded access to GPIO
+static struct gpiod_line_request *line_request = NULL;
+static int current_pin = -1;
+static int current_direction = -1;
+
+// Helper function to open GPIO chip
+static struct gpiod_chip *open_gpio_chip(void)
+{
+  char chip_path[32];
+  snprintf(chip_path, sizeof(chip_path), "/dev/gpiochip%d", GPIO_CHIP_NUMBER);
+  return gpiod_chip_open(chip_path);
+}
+#endif
+
 #endif
 
 #define TIMEOUT_SELECT 200
@@ -63,6 +80,20 @@ int initDevice(char *devicePath, int senseLineType, int senseLinePin)
 int closeDevice()
 {
   tcflush(serialIO, TCIOFLUSH);
+  
+#ifdef USE_LIBGPIOD
+#ifdef GPIOD_API_V2
+  // Clean up libgpiod v2 resources
+  if (line_request)
+  {
+    gpiod_line_request_release(line_request);
+    line_request = NULL;
+  }
+  current_pin = -1;
+  current_direction = -1;
+#endif
+#endif
+  
   return close(serialIO) == 0;
 }
 
@@ -140,6 +171,268 @@ int setSerialAttributes(int fd, int myBaud)
 }
 
 #ifdef USE_LIBGPIOD
+
+#ifdef GPIOD_API_V2
+// libgpiod v2 API implementation
+
+int setupGPIO(int pin)
+{
+  struct gpiod_chip *chip = open_gpio_chip();
+  if (!chip)
+    return 0;
+  
+  // In v2, we verify the line exists by getting info
+  struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, pin);
+  int result = (info != NULL);
+  
+  if (info)
+    gpiod_line_info_free(info);
+  
+  gpiod_chip_close(chip);
+  return result;
+}
+
+int setGPIODirection(int pin, int dir)
+{
+  struct gpiod_chip *chip = open_gpio_chip();
+  if (!chip)
+    return 0;
+  
+  // Release existing request only if we're changing pins or direction
+  if (line_request && (current_pin != pin || current_direction != dir))
+  {
+    gpiod_line_request_release(line_request);
+    line_request = NULL;
+    current_pin = -1;
+    current_direction = -1;
+  }
+  
+  // If we already have a request for this pin and direction, reuse it
+  if (line_request && current_pin == pin && current_direction == dir)
+  {
+    gpiod_chip_close(chip);
+    return 1;
+  }
+  
+  struct gpiod_line_settings *settings = gpiod_line_settings_new();
+  if (!settings)
+  {
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  if (dir == IN)
+  {
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
+  }
+  else
+  {
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+    gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+  }
+  
+  struct gpiod_line_config *config = gpiod_line_config_new();
+  if (!config)
+  {
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  int ret = gpiod_line_config_add_line_settings(config, &pin, 1, settings);
+  if (ret)
+  {
+    gpiod_line_config_free(config);
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  struct gpiod_request_config *req_config = gpiod_request_config_new();
+  if (!req_config)
+  {
+    gpiod_line_config_free(config);
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  gpiod_request_config_set_consumer(req_config, GPIO_CONSUMER_NAME);
+  
+  line_request = gpiod_chip_request_lines(chip, req_config, config);
+  
+  gpiod_request_config_free(req_config);
+  gpiod_line_config_free(config);
+  gpiod_line_settings_free(settings);
+  gpiod_chip_close(chip);
+  
+  if (line_request)
+  {
+    current_pin = pin;
+    current_direction = dir;
+    return 1;
+  }
+  
+  return 0;
+}
+
+int writeGPIO(int pin, int value)
+{
+  struct gpiod_chip *chip = open_gpio_chip();
+  if (!chip)
+    return 0;
+  
+  // Release existing request if we're changing pins
+  if (line_request && current_pin != pin)
+  {
+    gpiod_line_request_release(line_request);
+    line_request = NULL;
+    current_pin = -1;
+    current_direction = -1;
+  }
+  
+  struct gpiod_line_settings *settings = gpiod_line_settings_new();
+  if (!settings)
+  {
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+  gpiod_line_settings_set_output_value(settings, 
+    value == LOW ? GPIOD_LINE_VALUE_INACTIVE : GPIOD_LINE_VALUE_ACTIVE);
+  
+  struct gpiod_line_config *config = gpiod_line_config_new();
+  if (!config)
+  {
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  int ret = gpiod_line_config_add_line_settings(config, &pin, 1, settings);
+  if (ret)
+  {
+    gpiod_line_config_free(config);
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  struct gpiod_request_config *req_config = gpiod_request_config_new();
+  if (!req_config)
+  {
+    gpiod_line_config_free(config);
+    gpiod_line_settings_free(settings);
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  gpiod_request_config_set_consumer(req_config, GPIO_CONSUMER_NAME);
+  
+  line_request = gpiod_chip_request_lines(chip, req_config, config);
+  
+  gpiod_request_config_free(req_config);
+  gpiod_line_config_free(config);
+  gpiod_line_settings_free(settings);
+  gpiod_chip_close(chip);
+  
+  if (line_request)
+  {
+    current_pin = pin;
+    current_direction = OUT;
+    return 1;
+  }
+  
+  return 0;
+}
+
+int readGPIO(int pin)
+{
+  struct gpiod_chip *chip = open_gpio_chip();
+  if (!chip)
+    return -1;
+  
+  // Release existing request if we're changing pins
+  if (line_request && current_pin != pin)
+  {
+    gpiod_line_request_release(line_request);
+    line_request = NULL;
+    current_pin = -1;
+    current_direction = -1;
+  }
+  
+  // If we don't have a request or it's not configured as input, create/recreate it
+  if (!line_request || current_direction != IN)
+  {
+    if (line_request)
+    {
+      gpiod_line_request_release(line_request);
+      line_request = NULL;
+    }
+    
+    struct gpiod_line_settings *settings = gpiod_line_settings_new();
+    if (!settings)
+    {
+      gpiod_chip_close(chip);
+      return -1;
+    }
+    
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
+    
+    struct gpiod_line_config *config = gpiod_line_config_new();
+    if (!config)
+    {
+      gpiod_line_settings_free(settings);
+      gpiod_chip_close(chip);
+      return -1;
+    }
+    
+    int ret = gpiod_line_config_add_line_settings(config, &pin, 1, settings);
+    if (ret)
+    {
+      gpiod_line_config_free(config);
+      gpiod_line_settings_free(settings);
+      gpiod_chip_close(chip);
+      return -1;
+    }
+    
+    struct gpiod_request_config *req_config = gpiod_request_config_new();
+    if (!req_config)
+    {
+      gpiod_line_config_free(config);
+      gpiod_line_settings_free(settings);
+      gpiod_chip_close(chip);
+      return -1;
+    }
+    
+    gpiod_request_config_set_consumer(req_config, GPIO_CONSUMER_NAME);
+    
+    line_request = gpiod_chip_request_lines(chip, req_config, config);
+    
+    gpiod_request_config_free(req_config);
+    gpiod_line_config_free(config);
+    gpiod_line_settings_free(settings);
+    
+    if (!line_request)
+    {
+      gpiod_chip_close(chip);
+      return -1;
+    }
+    
+    current_pin = pin;
+    current_direction = IN;
+  }
+  
+  enum gpiod_line_value value = gpiod_line_request_get_value(line_request, pin);
+  
+  gpiod_chip_close(chip);
+  
+  return (value == GPIOD_LINE_VALUE_ACTIVE) ? 1 : 0;
+}
+
+#else
+// libgpiod v1 API implementation
 
 int setupGPIO(int pin)
 {
@@ -230,6 +523,8 @@ int readGPIO(int pin)
   
   return value;
 }
+
+#endif  // GPIOD_API_V2
 
 #else  // USE_LIBGPIOD
 
