@@ -3,6 +3,9 @@
 
 #ifdef USE_LIBGPIOD
 #include <gpiod.h>
+
+#define GPIO_CHIP_NUMBER 0
+#define GPIO_CONSUMER_NAME "openjvs"
 #endif
 
 #define TIMEOUT_SELECT 200
@@ -143,7 +146,7 @@ int setupGPIO(int pin)
   // With libgpiod, we don't need to export the GPIO pin
   // The character device interface handles this automatically
   // We just verify we can open the chip
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(GPIO_CHIP_NUMBER);
   if (!chip)
     return 0;
   
@@ -157,7 +160,7 @@ int setupGPIO(int pin)
 
 int setGPIODirection(int pin, int dir)
 {
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(GPIO_CHIP_NUMBER);
   if (!chip)
     return 0;
   
@@ -171,11 +174,11 @@ int setGPIODirection(int pin, int dir)
   int result;
   if (dir == IN)
   {
-    result = gpiod_line_request_input(line, "openjvs");
+    result = gpiod_line_request_input(line, GPIO_CONSUMER_NAME);
   }
   else
   {
-    result = gpiod_line_request_output(line, "openjvs", 0);
+    result = gpiod_line_request_output(line, GPIO_CONSUMER_NAME, 0);
   }
   
   gpiod_chip_close(chip);
@@ -184,7 +187,7 @@ int setGPIODirection(int pin, int dir)
 
 int writeGPIO(int pin, int value)
 {
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(GPIO_CHIP_NUMBER);
   if (!chip)
     return 0;
   
@@ -196,7 +199,7 @@ int writeGPIO(int pin, int value)
   }
   
   // Request the line as output with the desired value
-  int result = gpiod_line_request_output(line, "openjvs", value == LOW ? 0 : 1);
+  int result = gpiod_line_request_output(line, GPIO_CONSUMER_NAME, value == LOW ? 0 : 1);
   
   gpiod_chip_close(chip);
   return (result == 0) ? 1 : 0;
@@ -204,7 +207,7 @@ int writeGPIO(int pin, int value)
 
 int readGPIO(int pin)
 {
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(GPIO_CHIP_NUMBER);
   if (!chip)
     return -1;
   
@@ -216,7 +219,7 @@ int readGPIO(int pin)
   }
   
   // Request the line as input
-  if (gpiod_line_request_input(line, "openjvs") != 0)
+  if (gpiod_line_request_input(line, GPIO_CONSUMER_NAME) != 0)
   {
     gpiod_chip_close(chip);
     return -1;
