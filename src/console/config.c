@@ -97,8 +97,9 @@ JVSConfigStatus parseInputMapping(char *path, InputMappings *inputMappings)
     char *saveptr = NULL;
 
     char gamePath[MAX_PATH_LENGTH];
-    strcpy(gamePath, DEFAULT_DEVICE_MAPPING_PATH);
-    strcat(gamePath, path);
+    int ret = snprintf(gamePath, sizeof(gamePath), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, path);
+    if (ret < 0 || ret >= (int)sizeof(gamePath))
+        return JVS_CONFIG_STATUS_ERROR;
 
     if ((file = fopen(gamePath, "r")) == NULL)
         return JVS_CONFIG_STATUS_FILE_NOT_FOUND;
@@ -252,8 +253,9 @@ JVSConfigStatus parseOutputMapping(char *path, OutputMappings *outputMappings, c
     char *saveptr = NULL;
 
     char gamePath[MAX_PATH_LENGTH];
-    strcpy(gamePath, DEFAULT_GAME_MAPPING_PATH);
-    strcat(gamePath, path);
+    int ret = snprintf(gamePath, sizeof(gamePath), "%s%s", DEFAULT_GAME_MAPPING_PATH, path);
+    if (ret < 0 || ret >= (int)sizeof(gamePath))
+        return JVS_CONFIG_STATUS_ERROR;
 
     if ((file = fopen(gamePath, "r")) == NULL)
         return JVS_CONFIG_STATUS_FILE_NOT_FOUND;
@@ -423,8 +425,9 @@ JVSConfigStatus parseIO(char *path, JVSCapabilities *capabilities)
     char *saveptr = NULL;
 
     char ioPath[MAX_PATH_LENGTH];
-    strcpy(ioPath, DEFAULT_IO_PATH);
-    strcat(ioPath, path);
+    int ret = snprintf(ioPath, sizeof(ioPath), "%s%s", DEFAULT_IO_PATH, path);
+    if (ret < 0 || ret >= (int)sizeof(ioPath))
+        return JVS_CONFIG_STATUS_ERROR;
 
     if ((file = fopen(ioPath, "r")) == NULL)
         return JVS_CONFIG_STATUS_FILE_NOT_FOUND;

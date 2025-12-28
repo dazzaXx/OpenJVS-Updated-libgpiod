@@ -658,9 +658,9 @@ JVSInputStatus initInputs(char *outputMappingPath, char *configPath, char *secon
         Device *device = &deviceList->devices[i];
 
         char disabledPath[MAX_PATH_LENGTH];
-        strcpy(disabledPath, DEFAULT_DEVICE_MAPPING_PATH);
-        strcat(disabledPath, device->name);
-        strcat(disabledPath, ".disabled");
+        int ret = snprintf(disabledPath, sizeof(disabledPath), "%s%s.disabled", DEFAULT_DEVICE_MAPPING_PATH, device->name);
+        if (ret < 0 || ret >= (int)sizeof(disabledPath))
+            continue;
         FILE *file = fopen(disabledPath, "r");
         if (file != NULL)
         {

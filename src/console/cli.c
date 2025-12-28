@@ -53,12 +53,20 @@ JVSCLIStatus printVersion()
 JVSCLIStatus editFile(char *filePath)
 {
     char mainName[1024];
-    strcpy(mainName, DEFAULT_DEVICE_MAPPING_PATH);
-    strcat(mainName, filePath);
+    int ret = snprintf(mainName, sizeof(mainName), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, filePath);
+    if (ret < 0 || ret >= (int)sizeof(mainName))
+    {
+        printf("Error: File path too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
     if (access(mainName, F_OK) != 0)
     {
-        strcpy(mainName, DEFAULT_GAME_MAPPING_PATH);
-        strcat(mainName, filePath);
+        ret = snprintf(mainName, sizeof(mainName), "%s%s", DEFAULT_GAME_MAPPING_PATH, filePath);
+        if (ret < 0 || ret >= (int)sizeof(mainName))
+        {
+            printf("Error: File path too long\n");
+            return JVS_CLI_STATUS_ERROR;
+        }
         if (access(mainName, F_OK) != 0)
         {
             printf("Error: Could not find a game or device file with that name\n");
@@ -67,8 +75,12 @@ JVSCLIStatus editFile(char *filePath)
     }
 
     char command[1024];
-    strcpy(command, "sudo editor ");
-    strcat(command, mainName);
+    ret = snprintf(command, sizeof(command), "sudo editor %s", mainName);
+    if (ret < 0 || ret >= (int)sizeof(command))
+    {
+        printf("Error: Command too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
     system(command);
     return JVS_CLI_STATUS_SUCCESS_CLOSE;
 }
@@ -95,13 +107,16 @@ JVSCLIStatus enableDevice(char *deviceName)
             while ((dir = readdir(d)) != NULL)
             {
                 char gamePath[MAX_PATH_LENGTH];
-                strcpy(gamePath, DEFAULT_DEVICE_MAPPING_PATH);
-                strcat(gamePath, dir->d_name);
+                int ret = snprintf(gamePath, sizeof(gamePath), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, dir->d_name);
+                if (ret < 0 || ret >= (int)sizeof(gamePath))
+                    continue;
 
                 char gamePathEnabled[MAX_PATH_LENGTH];
-                strcpy(gamePathEnabled, gamePath);
+                int len = snprintf(gamePathEnabled, sizeof(gamePathEnabled), "%s", gamePath);
+                if (len < 0 || len >= (int)sizeof(gamePathEnabled))
+                    continue;
 
-                for (int i = 0; i < MAX_PATH_LENGTH; i++)
+                for (int i = 0; i < len; i++)
                 {
                     if (gamePathEnabled[i] == '.')
                     {
@@ -120,12 +135,20 @@ JVSCLIStatus enableDevice(char *deviceName)
     }
 
     char gamePath[MAX_PATH_LENGTH];
-    strcpy(gamePath, DEFAULT_DEVICE_MAPPING_PATH);
-    strcat(gamePath, deviceName);
+    int ret = snprintf(gamePath, sizeof(gamePath), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, deviceName);
+    if (ret < 0 || ret >= (int)sizeof(gamePath))
+    {
+        debug(0, "Failed to enable the controller, path too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
 
     char gamePathDisabled[MAX_PATH_LENGTH];
-    strcpy(gamePathDisabled, gamePath);
-    strcat(gamePathDisabled, ".disabled");
+    ret = snprintf(gamePathDisabled, sizeof(gamePathDisabled), "%s.disabled", gamePath);
+    if (ret < 0 || ret >= (int)sizeof(gamePathDisabled))
+    {
+        debug(0, "Failed to enable the controller, path too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
 
     if (rename(gamePathDisabled, gamePath) < 0)
     {
@@ -159,12 +182,14 @@ JVSCLIStatus disableDevice(char *deviceName)
             while ((dir = readdir(d)) != NULL)
             {
                 char gamePathEnabled[MAX_PATH_LENGTH];
-                strcpy(gamePathEnabled, DEFAULT_DEVICE_MAPPING_PATH);
-                strcat(gamePathEnabled, dir->d_name);
+                int ret = snprintf(gamePathEnabled, sizeof(gamePathEnabled), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, dir->d_name);
+                if (ret < 0 || ret >= (int)sizeof(gamePathEnabled))
+                    continue;
 
                 char gamePathDisabled[MAX_PATH_LENGTH];
-                strcpy(gamePathDisabled, gamePathEnabled);
-                strcat(gamePathDisabled, ".disabled");
+                ret = snprintf(gamePathDisabled, sizeof(gamePathDisabled), "%s.disabled", gamePathEnabled);
+                if (ret < 0 || ret >= (int)sizeof(gamePathDisabled))
+                    continue;
 
                 rename(gamePathEnabled, gamePathDisabled);
             }
@@ -176,12 +201,20 @@ JVSCLIStatus disableDevice(char *deviceName)
     }
 
     char gamePath[MAX_PATH_LENGTH];
-    strcpy(gamePath, DEFAULT_DEVICE_MAPPING_PATH);
-    strcat(gamePath, deviceName);
+    int ret = snprintf(gamePath, sizeof(gamePath), "%s%s", DEFAULT_DEVICE_MAPPING_PATH, deviceName);
+    if (ret < 0 || ret >= (int)sizeof(gamePath))
+    {
+        debug(0, "Failed to disable the controller, path too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
 
     char gamePathDisabled[MAX_PATH_LENGTH];
-    strcpy(gamePathDisabled, gamePath);
-    strcat(gamePathDisabled, ".disabled");
+    ret = snprintf(gamePathDisabled, sizeof(gamePathDisabled), "%s.disabled", gamePath);
+    if (ret < 0 || ret >= (int)sizeof(gamePathDisabled))
+    {
+        debug(0, "Failed to disable the controller, path too long\n");
+        return JVS_CLI_STATUS_ERROR;
+    }
 
     if (rename(gamePath, gamePathDisabled) < 0)
     {
@@ -239,8 +272,9 @@ JVSCLIStatus printListing()
     for (int i = 0; i < deviceList->length; i++)
     {
         char disabledString[MAX_PATH_LENGTH];
-        strcpy(disabledString, deviceList->devices[i].name);
-        strcat(disabledString, ".disabled");
+        int ret = snprintf(disabledString, sizeof(disabledString), "%s.disabled", deviceList->devices[i].name);
+        if (ret < 0 || ret >= (int)sizeof(disabledString))
+            continue;
         int disabled = parseInputMapping(disabledString, &inputMappings) == JVS_CONFIG_STATUS_SUCCESS;
         if (disabled)
         {
@@ -251,8 +285,9 @@ JVSCLIStatus printListing()
     for (int i = 0; i < deviceList->length; i++)
     {
         char disabledString[MAX_PATH_LENGTH];
-        strcpy(disabledString, deviceList->devices[i].name);
-        strcat(disabledString, ".disabled");
+        int ret = snprintf(disabledString, sizeof(disabledString), "%s.disabled", deviceList->devices[i].name);
+        if (ret < 0 || ret >= (int)sizeof(disabledString))
+            continue;
         int enabled = parseInputMapping(deviceList->devices[i].name, &inputMappings) == JVS_CONFIG_STATUS_SUCCESS;
         int disabled = parseInputMapping(disabledString, &inputMappings) == JVS_CONFIG_STATUS_SUCCESS;
         if (!enabled && !disabled)
@@ -260,7 +295,7 @@ JVSCLIStatus printListing()
             printDeviceListing(&deviceList->devices[i]);
         }
     }
-    debug(0, "\nPlease ignore WiiMote + Aimtrak listings. These are handeled differently and won't present properly here.\n");
+    debug(0, "\nPlease ignore WiiMote + Aimtrak listings. These are handled differently and won't present properly here.\n");
 
     if (deviceList != NULL)
     {
