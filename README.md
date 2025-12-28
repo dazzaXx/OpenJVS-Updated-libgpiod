@@ -36,3 +36,8 @@ sudo make install
 - [Hat Quickstart Guide](docs/hat-quickstart.md)
 
 
+## Update 28/12/25 -dazzaXx
+
+As using sysfs is now deprecated, this software no longer worked on newer kernels. It has now been updated to use the new modern libgpiod library for the sense pin. Updated with help from Github Copilot.
+
+
