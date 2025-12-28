@@ -1,6 +1,10 @@
 #include "hardware/device.h"
 #include "console/debug.h"
 
+#ifdef USE_LIBGPIOD
+#include <gpiod.h>
+#endif
+
 #define TIMEOUT_SELECT 200
 
 int serialIO = -1;
@@ -132,6 +136,100 @@ int setSerialAttributes(int fd, int myBaud)
   return 0;
 }
 
+#ifdef USE_LIBGPIOD
+
+int setupGPIO(int pin)
+{
+  // With libgpiod, we don't need to export the GPIO pin
+  // The character device interface handles this automatically
+  // We just verify we can open the chip
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  if (!chip)
+    return 0;
+  
+  // Verify the line exists
+  struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
+  int result = (line != NULL) ? 1 : 0;
+  
+  gpiod_chip_close(chip);
+  return result;
+}
+
+int setGPIODirection(int pin, int dir)
+{
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  if (!chip)
+    return 0;
+  
+  struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
+  if (!line)
+  {
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  int result;
+  if (dir == IN)
+  {
+    result = gpiod_line_request_input(line, "openjvs");
+  }
+  else
+  {
+    result = gpiod_line_request_output(line, "openjvs", 0);
+  }
+  
+  gpiod_chip_close(chip);
+  return (result == 0) ? 1 : 0;
+}
+
+int writeGPIO(int pin, int value)
+{
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  if (!chip)
+    return 0;
+  
+  struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
+  if (!line)
+  {
+    gpiod_chip_close(chip);
+    return 0;
+  }
+  
+  // Request the line as output with the desired value
+  int result = gpiod_line_request_output(line, "openjvs", value == LOW ? 0 : 1);
+  
+  gpiod_chip_close(chip);
+  return (result == 0) ? 1 : 0;
+}
+
+int readGPIO(int pin)
+{
+  struct gpiod_chip *chip = gpiod_chip_open_by_number(0);
+  if (!chip)
+    return -1;
+  
+  struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
+  if (!line)
+  {
+    gpiod_chip_close(chip);
+    return -1;
+  }
+  
+  // Request the line as input
+  if (gpiod_line_request_input(line, "openjvs") != 0)
+  {
+    gpiod_chip_close(chip);
+    return -1;
+  }
+  
+  int value = gpiod_line_get_value(line);
+  gpiod_chip_close(chip);
+  
+  return value;
+}
+
+#else  // USE_LIBGPIOD
+
 int setupGPIO(int pin)
 {
   char buffer[3];
@@ -202,6 +300,8 @@ int readGPIO(int pin)
   close(fd);
   return (atoi(value_str));
 }
+
+#endif  // USE_LIBGPIOD
 
 int setSenseLine(int state)
 {
