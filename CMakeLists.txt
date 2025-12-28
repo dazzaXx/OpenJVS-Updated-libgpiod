@@ -38,6 +38,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 if(LIBGPIOD_FOUND)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBGPIOD)
 	target_link_libraries(${PROJECT_NAME} ${LIBGPIOD_LIBRARIES})
+	
+	# Detect libgpiod major version to handle API differences
+	string(REGEX MATCH "^([0-9]+)" LIBGPIOD_VERSION_MAJOR "${LIBGPIOD_VERSION}")
+	message(STATUS "Found libgpiod version: ${LIBGPIOD_VERSION} (major: ${LIBGPIOD_VERSION_MAJOR})")
+	if(LIBGPIOD_VERSION_MAJOR GREATER_EQUAL 2)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE GPIOD_API_V2)
+		message(STATUS "Using libgpiod v2 API")
+	else()
+		message(STATUS "Using libgpiod v1 API")
+	endif()
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} m)
