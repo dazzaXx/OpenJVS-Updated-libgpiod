@@ -24,7 +24,7 @@ Installation is done from the git repository as follows:
 
 ```
 sudo apt install build-essential cmake git file libgpiod-dev
-git clone https://github.com/openjvs/openjvs
+git clone https://github.com/dazzaXx/openjvs
 make
 sudo make install
 ```
