@@ -283,7 +283,7 @@ int writeGPIO(int pin, int value)
   if (!chip)
     return 0;
   
-  // Release existing request if we're changing pins or direction
+  // Release existing request if we're changing pins or if it's not configured as OUTPUT
   if (line_request && (current_pin != pin || current_direction != OUT))
   {
     gpiod_line_request_release(line_request);
@@ -292,7 +292,7 @@ int writeGPIO(int pin, int value)
     current_direction = -1;
   }
   
-  // If we already have an output request for this pin, just set the value
+  // If we already have an output request for this pin, just update the value
   if (line_request && current_pin == pin && current_direction == OUT)
   {
     enum gpiod_line_value gpio_value = (value == LOW) ? GPIOD_LINE_VALUE_INACTIVE : GPIOD_LINE_VALUE_ACTIVE;
