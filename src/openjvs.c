@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
         // Create the JVSIO
         JVSIO io = {0};
-        io.deviceID = 1;
+        io.deviceID = -1;
         io.chainedIO = NULL;
 
         debug(1, "Init inputs\n");
@@ -167,8 +167,8 @@ int main(int argc, char **argv)
         {
             debug(1, "Parse Second IO\n");
             JVSIO secondIO = {0};
-            io.deviceID = 2;
-            secondIO.deviceID = 1;
+            io.deviceID = -1;
+            secondIO.deviceID = -1;
             ioStatus = parseIO(config.secondCapabilitiesPath, &secondIO.capabilities);
             if (ioStatus != JVS_CONFIG_STATUS_SUCCESS)
             {
