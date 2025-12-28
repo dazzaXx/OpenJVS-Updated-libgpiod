@@ -167,7 +167,6 @@ int main(int argc, char **argv)
         {
             debug(1, "Parse Second IO\n");
             JVSIO secondIO = {0};
-            io.deviceID = -1;
             secondIO.deviceID = -1;
             ioStatus = parseIO(config.secondCapabilitiesPath, &secondIO.capabilities);
             if (ioStatus != JVS_CONFIG_STATUS_SUCCESS)
