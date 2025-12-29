@@ -553,21 +553,24 @@ int getNumberOfDevices(void)
     int count = scandir(DEV_INPUT_EVENT, &namelist, isEventDevice, NULL);
     
     // Free the allocated memory based on scandir behavior:
-    // - If count > 0: free each entry and the array
-    // - If count == 0: only free the array (implementation may allocate it)
-    // - If count < 0: nothing to free (error case)
+    // According to POSIX, when count >= 0, namelist is allocated and must be freed.
+    // When count < 0 (error), namelist is not modified.
     if (count > 0)
     {
+        // Free each directory entry and then the array
         for (int i = 0; i < count; i++)
         {
             free(namelist[i]);
         }
         free(namelist);
     }
-    else if (count == 0 && namelist != NULL)
+    else if (count == 0)
     {
+        // No entries but array may still be allocated by some implementations
+        // Safe to call free(NULL) on implementations that don't allocate
         free(namelist);
     }
+    // If count < 0, scandir failed and namelist was not modified, nothing to free
     
     return count;
 }
