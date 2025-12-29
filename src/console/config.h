@@ -5,12 +5,12 @@
 
 /* Default config values */
 #define DEFAULT_CONFIG_PATH "/etc/openjvs/config"
-#define DEFAULT_DEBUG_LEVEL 0
+#define DEFAULT_DEBUG_LEVEL 2
 #define DEFAULT_DEVICE_MAPPING_PATH "/etc/openjvs/devices/"
 #define DEFAULT_DEVICE_PATH "/dev/ttyUSB0"
 #define DEFAULT_GAME "generic"
 #define DEFAULT_GAME_MAPPING_PATH "/etc/openjvs/games/"
-#define DEFAULT_IO "sega-type-3"
+#define DEFAULT_IO "namco-FCA1"
 #define DEFAULT_IO_PATH "/etc/openjvs/ios/"
 #define DEFAULT_ROTARY_PATH "/etc/openjvs/rotary"
 #define DEFAULT_SENSE_LINE_PIN 12
