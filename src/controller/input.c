@@ -33,6 +33,13 @@
 #define DEV_INPUT_EVENT "/dev/input"
 #define test_bit(bit, array) (array[bit / 8] & (1 << (bit % 8)))
 
+// Device name patterns to filter out (non-controller devices)
+static const char *FILTERED_DEVICE_PATTERNS[] = {
+    "vc4-hdmi",
+    "HDMI",
+    NULL  // Sentinel value to mark end of array
+};
+
 typedef struct
 {
     ThreadSharedData *sharedData_p;
@@ -508,6 +515,16 @@ static int isEventDevice(const struct dirent *dir)
     return strncmp("event", dir->d_name, 5) == 0;
 }
 
+static int shouldFilterDevice(const char *deviceName)
+{
+    for (int i = 0; FILTERED_DEVICE_PATTERNS[i] != NULL; i++)
+    {
+        if (strstr(deviceName, FILTERED_DEVICE_PATTERNS[i]) != NULL)
+            return 1;
+    }
+    return 0;
+}
+
 int getNumberOfDevices(void)
 {
     struct dirent **namelist;
@@ -547,9 +564,7 @@ JVSInputStatus getInputs(DeviceList *deviceList)
         ioctl(device, EVIOCGNAME(sizeof(tempFullName)), tempFullName);
 
         // Filter out non-controller devices (HDMI, sound cards, etc.)
-        // Check for known device name patterns that are not input controllers
-        if (strstr(tempFullName, "vc4-hdmi") != NULL ||
-            strstr(tempFullName, "HDMI") != NULL)
+        if (shouldFilterDevice(tempFullName))
         {
             close(device);
             continue;
