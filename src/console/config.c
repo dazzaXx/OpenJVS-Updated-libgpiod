@@ -85,11 +85,11 @@ JVSConfigStatus parseConfig(char *path, JVSConfig *config)
         else if (strcmp(command, "ANALOG_DEADZONE") == 0)
         {
             double deadzone = atof(getNextToken(NULL, " ", &saveptr));
-            /* Clamp deadzone to valid range [0.0, 0.5) to prevent division by zero */
+            /* Clamp deadzone to valid range [0.0, MAX_ANALOG_DEADZONE) to prevent division by zero */
             if (deadzone < 0.0)
                 deadzone = 0.0;
-            else if (deadzone >= 0.5)
-                deadzone = 0.49;
+            else if (deadzone >= MAX_ANALOG_DEADZONE)
+                deadzone = MAX_ANALOG_DEADZONE - 0.01;
             config->analogDeadzone = deadzone;
         }
 

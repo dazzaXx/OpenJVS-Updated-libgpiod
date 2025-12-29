@@ -33,9 +33,8 @@
 #define DEV_INPUT_EVENT "/dev/input"
 #define test_bit(bit, array) (array[bit / 8] & (1 << (bit % 8)))
 
-/* Analog stick deadzone constants */
+/* Analog stick center value for deadzone calculations */
 #define ANALOG_CENTER_VALUE 0.5
-#define MAX_ANALOG_DEADZONE 0.5
 
 // Device name patterns to filter out (non-controller devices)
 // These patterns match device names that should not be treated as game controllers
