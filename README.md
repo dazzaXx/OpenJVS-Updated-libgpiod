@@ -26,8 +26,6 @@ The following arcade boards are supported:
 - Taito Type X2
 - exA-Arcadia
 
-Questions can be asked in the discord channel: https://arcade.community. If it asks you to create an account, you can simply click anywhere away from the box  and it'll let you in!
-
 ## Installation
 
 Installation is done from the git repository as follows, using RaspiOS Lite:
