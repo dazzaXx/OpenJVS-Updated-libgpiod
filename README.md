@@ -2,7 +2,7 @@
 
 OpenJVS is an emulator for I/O boards in arcade machines that use the JVS protocol. It requires a USB RS485 converter, or an official OpenJVS HAT.
 
-As using sysfs is now deprecated in newer linux kernels, this software no longer worked properly on them. It has now been updated to use the new modern libgpiod library for the sense pin, with backwards-compatible support for sysfs if needed. Updated with help from Github Copilot.
+As using sysfs is now deprecated in newer linux kernels, this software no longer worked properly on them. It has now been updated to use the new modern libgpiod library for the sense pin, with backwards-compatible support for sysfs if needed. The overall code has also been optimized too. Updated with help from Github Copilot.
 
 The following arcade boards are supported:
 
