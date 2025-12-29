@@ -34,9 +34,30 @@
 #define test_bit(bit, array) (array[bit / 8] & (1 << (bit % 8)))
 
 // Device name patterns to filter out (non-controller devices)
+// These patterns match device names that should not be treated as game controllers
 static const char *FILTERED_DEVICE_PATTERNS[] = {
-    "vc4-hdmi",
-    "HDMI",
+    // Audio/HDMI devices
+    "vc4-hdmi",           // Raspberry Pi HDMI/CEC interface
+    "HDMI",               // Generic HDMI devices
+    "hdmi",               // Lowercase HDMI variants
+    "headphone",          // Headphone jack detection
+    "Headphone",          // Headphone jack detection (capitalized)
+    
+    // Sound devices
+    "snd_",               // ALSA sound devices (snd_bcm2835, etc.)
+    "pcspkr",             // PC Speaker
+    "PC Speaker",         // PC Speaker (capitalized)
+    
+    // Power management
+    "Power Button",       // Power buttons
+    "power-button",       // Power buttons (lowercase)
+    "Sleep Button",       // Sleep buttons
+    "Lid Switch",         // Lid switches
+    
+    // Video/Camera devices
+    "Video Bus",          // Video4Linux devices
+    "video",              // Generic video devices
+    
     NULL  // Sentinel value to mark end of array
 };
 
