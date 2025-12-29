@@ -404,9 +404,9 @@ static void *deviceThread(void *_args)
 
                     /* Determine which stick this axis belongs to and apply deadzone.
                      * Only ABS_X/ABS_Y (left stick) and ABS_RX/ABS_RY (right stick) get deadzone.
-                     * ABS_Z and ABS_RZ typically represent triggers (L2/R2), not analog sticks,
-                     * so they are excluded to maintain pressure sensitivity. They will fall through
-                     * to the pass-through path below without deadzone processing.
+                     * ABS_Z and ABS_RZ are excluded as they are commonly used for triggers
+                     * (L2/R2 on PlayStation controllers, LT/RT on some Xbox controllers),
+                     * and should maintain full pressure sensitivity without deadzone.
                      * Controllers with non-standard mappings should use custom device mappings.
                      */
                     int isLeftStick = (event.code == ABS_X || event.code == ABS_Y);
