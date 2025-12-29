@@ -24,8 +24,7 @@ static void *watchdogThread(void *_args)
 {
     WatchdogThreadArguments *args = (WatchdogThreadArguments *)_args;
 
-    int originalDevicesCount = 0;
-    originalDevicesCount = getNumberOfDevices();
+    int originalDevicesCount = getNumberOfDevices();
 
     int rotaryValue = -1;
 
