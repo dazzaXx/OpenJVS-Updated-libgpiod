@@ -28,3 +28,10 @@ DEVICE_PATH /dev/ttyUSB0
 # that haven't already been mapped.
 AUTO_CONTROLLER_DETECTION 1
 
+# Analog Deadzone for Player 1 and Player 2 Controllers
+# Value range: 0.0 to 0.5 (0.0 = no deadzone, 0.1 = 10% deadzone, etc.)
+# This only applies to analog stick inputs (X and Y axes) for players 1 and 2.
+# Does not affect guns, rotary controllers, or other input types.
+# Example: ANALOG_DEADZONE 0.1
+ANALOG_DEADZONE 0.0
+

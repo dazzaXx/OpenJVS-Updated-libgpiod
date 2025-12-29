@@ -69,6 +69,7 @@ typedef struct
     char devicePath[MAX_PATH_LENGTH];
     EVInputs inputs;
     int player;
+    double analogDeadzone;
 } MappingThreadArguments;
 
 static void *wiiDeviceThread(void *_args)
@@ -341,6 +342,30 @@ static void *deviceThread(void *_args)
                     scaled = scaled > 1 ? 1 : scaled;
                     scaled = scaled < 0 ? 0 : scaled;
 
+                    /* Apply deadzone only to analog stick inputs (X and Y) for players 1 and 2 */
+                    if (args->analogDeadzone > 0 && 
+                        (args->player == 1 || args->player == 2) &&
+                        args->inputs.abs[event.code].type == ANALOGUE &&
+                        (args->inputs.abs[event.code].input == CONTROLLER_ANALOGUE_X || 
+                         args->inputs.abs[event.code].input == CONTROLLER_ANALOGUE_Y))
+                    {
+                        /* Center the value around 0.5 */
+                        double centered = scaled - 0.5;
+                        double magnitude = fabs(centered);
+                        
+                        /* Apply deadzone: if within deadzone, set to center (0.5) */
+                        if (magnitude < args->analogDeadzone)
+                        {
+                            scaled = 0.5;
+                        }
+                        else
+                        {
+                            /* Scale the remaining range outside the deadzone */
+                            double sign = (centered > 0) ? 1.0 : -1.0;
+                            scaled = 0.5 + sign * ((magnitude - args->analogDeadzone) / (0.5 - args->analogDeadzone)) * 0.5;
+                        }
+                    }
+
                     setAnalogue(args->jvsIO, args->inputs.abs[event.code].output, args->inputs.abs[event.code].reverse ? 1 - scaled : scaled);
                     setGun(args->jvsIO, args->inputs.abs[event.code].output, args->inputs.abs[event.code].reverse ? 1 - scaled : scaled);
                 }
@@ -370,7 +395,7 @@ static void *deviceThread(void *_args)
 
     return 0;
 }
-static void startThread(EVInputs *inputs, char *devicePath, int wiiMode, int player, JVSIO *jvsIO)
+static void startThread(EVInputs *inputs, char *devicePath, int wiiMode, int player, JVSIO *jvsIO, double analogDeadzone)
 {
     MappingThreadArguments *args = malloc(sizeof(MappingThreadArguments));
     if (args == NULL)
@@ -383,6 +408,7 @@ static void startThread(EVInputs *inputs, char *devicePath, int wiiMode, int pla
     memcpy(&args->inputs, inputs, sizeof(EVInputs));
     args->player = player;
     args->jvsIO = jvsIO;
+    args->analogDeadzone = analogDeadzone;
 
     if (wiiMode)
     {
@@ -721,7 +747,7 @@ JVSInputStatus getInputs(DeviceList *deviceList)
  * @param autoDetect If we should automatically map controllers without mappings
  * @returns The status of the operation
  **/
-JVSInputStatus initInputs(char *outputMappingPath, char *configPath, char *secondConfigPath, JVSIO *jvsIO, int autoDetect)
+JVSInputStatus initInputs(char *outputMappingPath, char *configPath, char *secondConfigPath, JVSIO *jvsIO, int autoDetect, double analogDeadzone)
 {
     OutputMappings outputMappings = {0};
     DeviceList *deviceList = (DeviceList *)malloc(sizeof(DeviceList));
@@ -810,12 +836,12 @@ JVSInputStatus initInputs(char *outputMappingPath, char *configPath, char *secon
 
         if (inputMappings.player != -1)
         {
-            startThread(&evInputs, device->path, strcmp(device->name, WIIMOTE_DEVICE_NAME_IR) == 0, inputMappings.player, jvsIO);
+            startThread(&evInputs, device->path, strcmp(device->name, WIIMOTE_DEVICE_NAME_IR) == 0, inputMappings.player, jvsIO, analogDeadzone);
             debug(0, "  Player %d (Fixed via config):\t\t%s%s\n", inputMappings.player, deviceList->devices[i].name, specialMap);
         }
         else
         {
-            startThread(&evInputs, device->path, strcmp(device->name, WIIMOTE_DEVICE_NAME_IR) == 0, playerNumber, jvsIO);
+            startThread(&evInputs, device->path, strcmp(device->name, WIIMOTE_DEVICE_NAME_IR) == 0, playerNumber, jvsIO, analogDeadzone);
             if (strcmp(deviceList->devices[i].name, AIMTRAK_DEVICE_NAME_REMAP_OUT_SCREEN) != 0 && strcmp(deviceList->devices[i].name, AIMTRAK_DEVICE_NAME_REMAP_JOYSTICK) != 0 && strcmp(deviceList->devices[i].name, WIIMOTE_DEVICE_NAME_IR) != 0)
             {
                 debug(0, "  Player %d:\t\t%s%s\n", playerNumber, deviceName, specialMap);
