@@ -42,6 +42,9 @@ static void *watchdogThread(void *_args)
         }
 
         // Check if device count has changed or if we can't enumerate devices
+        // - currentDeviceCount == -1: error accessing /dev/input (trigger restart)
+        // - currentDeviceCount == 0: no event devices (but not an error, continue monitoring)
+        // - currentDeviceCount != originalDevicesCount: device added/removed (trigger restart)
         int currentDeviceCount = getNumberOfDevices();
         if ((currentDeviceCount == -1) || (currentDeviceCount != originalDevicesCount))
         {

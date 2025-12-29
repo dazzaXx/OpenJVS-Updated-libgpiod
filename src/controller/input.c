@@ -552,13 +552,20 @@ int getNumberOfDevices(void)
     struct dirent **namelist = NULL;
     int count = scandir(DEV_INPUT_EVENT, &namelist, isEventDevice, NULL);
     
-    // Free the allocated memory if scandir succeeded (returned > 0)
+    // Free the allocated memory based on scandir behavior:
+    // - If count > 0: free each entry and the array
+    // - If count == 0: only free the array (implementation may allocate it)
+    // - If count < 0: nothing to free (error case)
     if (count > 0)
     {
         for (int i = 0; i < count; i++)
         {
             free(namelist[i]);
         }
+        free(namelist);
+    }
+    else if (count == 0 && namelist != NULL)
+    {
         free(namelist);
     }
     
