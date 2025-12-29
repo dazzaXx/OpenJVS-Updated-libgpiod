@@ -77,6 +77,30 @@ Check the /etc/openjvs/ios folder to see which I/O boards can be emulated and in
 
 By default it will emulate the Namco FCA1, as well as the debug level set to 2.
 
+### Analog Stick Deadzone
+
+OpenJVS supports configurable deadzone for analog sticks to reduce sensitivity and prevent drift. This can be configured in `/etc/openjvs/config`:
+
+```
+# Analog Stick Deadzone
+# Sets the deadzone for analog sticks on joystick controllers (0.0 to 1.0)
+# Values within the deadzone are treated as centered (no input)
+# Typical values: 0.0 (no deadzone), 0.1 (10%), 0.15 (15%), 0.2 (20%)
+# This only applies to analog stick axes (X, Y, Z), not triggers, pedals, or light guns
+# Default: 0.0 (no deadzone)
+ANALOG_DEADZONE 0.15
+```
+
+**Important Notes:**
+- The deadzone only applies to **analog stick axes** (X, Y, Z) from **joystick devices**
+- It does NOT apply to:
+  - Light gun inputs (even though they use analog axes)
+  - Triggers or pedals (R, L, T axes)
+  - Keyboard or mouse devices
+- Typical deadzone values range from 0.1 (10%) to 0.2 (20%)
+- Use higher values if your controller has significant drift or is too sensitive
+- Values outside the deadzone are automatically scaled to use the full output range
+
 ##
 
 Make sure to check the original guide.md in the docs folder to find out how to configure it in more detail.
