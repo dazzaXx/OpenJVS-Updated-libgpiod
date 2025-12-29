@@ -28,6 +28,8 @@ JVSConfigStatus getDefaultConfig(JVSConfig *config)
     config->senseLinePin = DEFAULT_SENSE_LINE_PIN;
     config->debugLevel = DEFAULT_DEBUG_LEVEL;
     config->autoControllerDetection = DEFAULT_AUTO_CONTROLLER_DETECTION;
+    config->deadzoneP1 = DEFAULT_DEADZONE_P1;
+    config->deadzoneP2 = DEFAULT_DEADZONE_P2;
     strcpy(config->defaultGamePath, DEFAULT_GAME);
     strcpy(config->devicePath, DEFAULT_DEVICE_PATH);
     strcpy(config->capabilitiesPath, DEFAULT_IO);
@@ -80,6 +82,12 @@ JVSConfigStatus parseConfig(char *path, JVSConfig *config)
 
         else if (strcmp(command, "AUTO_CONTROLLER_DETECTION") == 0)
             config->autoControllerDetection = atoi(getNextToken(NULL, " ", &saveptr));
+
+        else if (strcmp(command, "DEADZONE_P1") == 0)
+            config->deadzoneP1 = atof(getNextToken(NULL, " ", &saveptr));
+
+        else if (strcmp(command, "DEADZONE_P2") == 0)
+            config->deadzoneP2 = atof(getNextToken(NULL, " ", &saveptr));
 
         else
             printf("Error: Unknown configuration command %s\n", command);
