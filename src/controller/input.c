@@ -33,6 +33,10 @@
 #define DEV_INPUT_EVENT "/dev/input"
 #define test_bit(bit, array) (array[bit / 8] & (1 << (bit % 8)))
 
+/* Analog stick deadzone constants */
+#define ANALOG_CENTER_VALUE 0.5
+#define MAX_ANALOG_DEADZONE 0.5
+
 // Device name patterns to filter out (non-controller devices)
 // These patterns match device names that should not be treated as game controllers
 static const char *FILTERED_DEVICE_PATTERNS[] = {
@@ -343,26 +347,26 @@ static void *deviceThread(void *_args)
                     scaled = scaled < 0 ? 0 : scaled;
 
                     /* Apply deadzone only to analog stick inputs (X and Y) for players 1 and 2 */
-                    if (args->analogDeadzone > 0 && args->analogDeadzone < 0.5 &&
+                    if (args->analogDeadzone > 0 && args->analogDeadzone < MAX_ANALOG_DEADZONE &&
                         (args->player == 1 || args->player == 2) &&
                         args->inputs.abs[event.code].type == ANALOGUE &&
                         (args->inputs.abs[event.code].input == CONTROLLER_ANALOGUE_X || 
                          args->inputs.abs[event.code].input == CONTROLLER_ANALOGUE_Y))
                     {
                         /* Center the value around 0.5 */
-                        double centered = scaled - 0.5;
+                        double centered = scaled - ANALOG_CENTER_VALUE;
                         double magnitude = fabs(centered);
                         
-                        /* Apply deadzone: if within deadzone, set to center (0.5) */
+                        /* Apply deadzone: if within deadzone, set to center */
                         if (magnitude < args->analogDeadzone)
                         {
-                            scaled = 0.5;
+                            scaled = ANALOG_CENTER_VALUE;
                         }
                         else
                         {
                             /* Scale the remaining range outside the deadzone */
                             double sign = (centered > 0) ? 1.0 : -1.0;
-                            scaled = 0.5 + sign * ((magnitude - args->analogDeadzone) / (0.5 - args->analogDeadzone)) * 0.5;
+                            scaled = ANALOG_CENTER_VALUE + sign * ((magnitude - args->analogDeadzone) / (MAX_ANALOG_DEADZONE - args->analogDeadzone)) * ANALOG_CENTER_VALUE;
                         }
                     }
 

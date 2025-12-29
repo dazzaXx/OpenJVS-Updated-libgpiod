@@ -83,7 +83,15 @@ JVSConfigStatus parseConfig(char *path, JVSConfig *config)
             config->autoControllerDetection = atoi(getNextToken(NULL, " ", &saveptr));
 
         else if (strcmp(command, "ANALOG_DEADZONE") == 0)
-            config->analogDeadzone = atof(getNextToken(NULL, " ", &saveptr));
+        {
+            double deadzone = atof(getNextToken(NULL, " ", &saveptr));
+            /* Clamp deadzone to valid range [0.0, 0.5) to prevent division by zero */
+            if (deadzone < 0.0)
+                deadzone = 0.0;
+            else if (deadzone >= 0.5)
+                deadzone = 0.49;
+            config->analogDeadzone = deadzone;
+        }
 
         else
             printf("Error: Unknown configuration command %s\n", command);
