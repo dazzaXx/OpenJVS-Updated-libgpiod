@@ -361,9 +361,9 @@ static void *deviceThread(void *_args)
                         {
                             scaled = ANALOG_CENTER_VALUE;
                         }
-                        else
+                        else if (MAX_ANALOG_DEADZONE - args->analogDeadzone > 0.0001)
                         {
-                            /* Scale the remaining range outside the deadzone */
+                            /* Scale the remaining range outside the deadzone (with safety check for division) */
                             double sign = (centered > 0) ? 1.0 : -1.0;
                             scaled = ANALOG_CENTER_VALUE + sign * ((magnitude - args->analogDeadzone) / (MAX_ANALOG_DEADZONE - args->analogDeadzone)) * ANALOG_CENTER_VALUE;
                         }
