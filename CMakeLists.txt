@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(openjvs
         VERSION "4.0"
-		LANGUAGES "C"
+        LANGUAGES "C"
         DESCRIPTION "An emulator for arcade JVS I/O boards"
         HOMEPAGE_URL "https://github.com/dazzaXx/OpenJVS-Updated-libgpiod"
 )
@@ -12,7 +12,7 @@ find_package(Threads REQUIRED)
 # Optionally find libgpiod for modern GPIO character-device API
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
-	pkg_check_modules(LIBGPIOD QUIET libgpiod)
+    pkg_check_modules(LIBGPIOD QUIET libgpiod)
 endif()
 
 configure_file(src/version.h.in version.h)
@@ -47,7 +47,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Add libgpiod includes if found
 if(LIBGPIOD_FOUND)
-	target_include_directories(${PROJECT_NAME} PRIVATE ${LIBGPIOD_INCLUDE_DIRS})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${LIBGPIOD_INCLUDE_DIRS})
 endif()
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
@@ -60,37 +60,37 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Enable libgpiod support if found
 if(LIBGPIOD_FOUND)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBGPIOD)
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGPIOD_LIBRARIES})
-	
-	# Detect libgpiod major version to handle API differences
-	string(REGEX MATCH "^([0-9]+)" LIBGPIOD_VERSION_MAJOR "${LIBGPIOD_VERSION}")
-	message(STATUS "Found libgpiod version: ${LIBGPIOD_VERSION} (major: ${LIBGPIOD_VERSION_MAJOR})")
-	if(LIBGPIOD_VERSION_MAJOR GREATER_EQUAL 2)
-		target_compile_definitions(${PROJECT_NAME} PRIVATE GPIOD_API_V2)
-		message(STATUS "Using libgpiod v2 API")
-	else()
-		message(STATUS "Using libgpiod v1 API")
-	endif()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBGPIOD)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGPIOD_LIBRARIES})
+    
+    # Detect libgpiod major version to handle API differences
+    string(REGEX MATCH "^([0-9]+)" LIBGPIOD_VERSION_MAJOR "${LIBGPIOD_VERSION}")
+    message(STATUS "Found libgpiod version: ${LIBGPIOD_VERSION} (major: ${LIBGPIOD_VERSION_MAJOR})")
+    if(LIBGPIOD_VERSION_MAJOR GREATER_EQUAL 2)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE GPIOD_API_V2)
+        message(STATUS "Using libgpiod v2 API")
+    else()
+        message(STATUS "Using libgpiod v1 API")
+    endif()
 endif()
 
 # Installation rules
 install(TARGETS ${PROJECT_NAME}
-	COMPONENT ${PROJECT_NAME}
-	RUNTIME DESTINATION "bin/"
-	LIBRARY DESTINATION "lib/"
+    COMPONENT ${PROJECT_NAME}
+    RUNTIME DESTINATION "bin/"
+    LIBRARY DESTINATION "lib/"
 )
 
 install(FILES
-	${CMAKE_SOURCE_DIR}/docs/openjvs.service
-	${CMAKE_SOURCE_DIR}/docs/openjvs@.service
-	COMPONENT ${PROJECT_NAME}
-	DESTINATION "/etc/systemd/system/"
+    ${CMAKE_SOURCE_DIR}/docs/openjvs.service
+    ${CMAKE_SOURCE_DIR}/docs/openjvs@.service
+    COMPONENT ${PROJECT_NAME}
+    DESTINATION "/etc/systemd/system/"
 )
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/docs/openjvs
-	COMPONENT ${PROJECT_NAME}
-	DESTINATION "/etc/"
+    COMPONENT ${PROJECT_NAME}
+    DESTINATION "/etc/"
 )
 
 # CPack configuration for DEB package generation
