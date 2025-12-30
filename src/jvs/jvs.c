@@ -523,6 +523,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			size = 1;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 			char idData[100];
+			idData[0] = '\0'; // Initialize to empty string
 			for (int i = 1; i < 100; i++)
 			{
 				idData[i] = (char)inputPacket.data[index + i];
