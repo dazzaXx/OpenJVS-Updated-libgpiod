@@ -236,7 +236,15 @@ static JVSCLIStatus disableDevice(char *deviceName)
 
 static JVSCLIStatus printDeviceListing(Device *device)
 {
-    printf("  - %s (%s)\n", device->name, device->physicalLocation);
+    // Display unique ID if it's not empty and different from the path fallback
+    if (device->uniqueID[0] != '\0' && strstr(device->uniqueID, device->path) == NULL)
+    {
+        printf("  - %s (%s, ID: %s)\n", device->name, device->physicalLocation, device->uniqueID);
+    }
+    else
+    {
+        printf("  - %s (%s)\n", device->name, device->physicalLocation);
+    }
 
     return JVS_CLI_STATUS_SUCCESS_CONTINUE;
 }
