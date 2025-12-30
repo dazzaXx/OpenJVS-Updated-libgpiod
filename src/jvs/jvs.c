@@ -329,6 +329,12 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			{
 				for (int j = 0; j < inputPacket.data[index + 2]; j++)
 				{
+					// Bounds check to prevent buffer overflow
+					if (outputPacket.length >= JVS_MAX_PACKET_SIZE)
+					{
+						debug(0, "Error: Output packet size exceeded in CMD_READ_SWITCHES\n");
+						return JVS_STATUS_ERROR;
+					}
 					outputPacket.data[outputPacket.length++] = jvsIO->state.inputSwitch[i + 1] >> (8 - (j * 8));
 				}
 			}
@@ -344,6 +350,12 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 			for (int i = 0; i < numberCoinSlots; i++)
 			{
+				// Bounds check to prevent buffer overflow
+				if (outputPacket.length + 2 > JVS_MAX_PACKET_SIZE)
+				{
+					debug(0, "Error: Output packet size exceeded in CMD_READ_COINS\n");
+					return JVS_STATUS_ERROR;
+				}
 				outputPacket.data[outputPacket.length] = (jvsIO->state.coinCount[i] << 8) & 0x1F;
 				outputPacket.data[outputPacket.length + 1] = jvsIO->state.coinCount[i] & 0xFF;
 				outputPacket.length += 2;
@@ -361,6 +373,12 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 			for (int i = 0; i < numberChannels; i++)
 			{
+				// Bounds check to prevent buffer overflow
+				if (outputPacket.length + 2 > JVS_MAX_PACKET_SIZE)
+				{
+					debug(0, "Error: Output packet size exceeded in CMD_READ_ANALOGS\n");
+					return JVS_STATUS_ERROR;
+				}
 				/* By default left align the data */
 				int analogueData = jvsIO->state.analogueChannel[i] << jvsIO->analogueRestBits;
 				outputPacket.data[outputPacket.length] = analogueData >> 8;
@@ -380,6 +398,12 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 			for (int i = 0; i < numberChannels; i++)
 			{
+				// Bounds check to prevent buffer overflow
+				if (outputPacket.length + 2 > JVS_MAX_PACKET_SIZE)
+				{
+					debug(0, "Error: Output packet size exceeded in CMD_READ_ROTARY\n");
+					return JVS_STATUS_ERROR;
+				}
 				outputPacket.data[outputPacket.length] = jvsIO->state.rotaryChannel[i] >> 8;
 				outputPacket.data[outputPacket.length + 1] = jvsIO->state.rotaryChannel[i] & 0xFF;
 				outputPacket.length += 2;
@@ -390,6 +414,12 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		case CMD_READ_KEYPAD:
 		{
 			debug(1, "CMD_READ_KEYPAD - Reading keypad state\n");
+			// Bounds check to prevent buffer overflow
+			if (outputPacket.length + 2 > JVS_MAX_PACKET_SIZE)
+			{
+				debug(0, "Error: Output packet size exceeded in CMD_READ_KEYPAD\n");
+				return JVS_STATUS_ERROR;
+			}
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = 0x00;
 			outputPacket.length += 2;
