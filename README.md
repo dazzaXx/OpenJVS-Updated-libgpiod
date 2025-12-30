@@ -75,7 +75,7 @@ sudo nano /etc/openjvs/config
 ```
 Check the /etc/openjvs/ios folder to see which I/O boards can be emulated and input the name of it on the EMULATE line.
 
-By default it will emulate the Namco FCA1, as well as the debug level set to 2.
+By default it will emulate the Namco FCA1, as well as the debug level set to 1.
 
 ##
 
