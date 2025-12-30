@@ -330,7 +330,8 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				for (int j = 0; j < inputPacket.data[index + 2]; j++)
 				{
 					// Bounds check to prevent buffer overflow
-					if (outputPacket.length >= JVS_MAX_PACKET_SIZE)
+					// Check before writing to ensure we have space for the next byte
+					if (outputPacket.length + 1 > JVS_MAX_PACKET_SIZE)
 					{
 						debug(0, "Error: Output packet size exceeded in CMD_READ_SWITCHES\n");
 						return JVS_STATUS_ERROR;
@@ -356,7 +357,8 @@ JVSStatus processPacket(JVSIO *jvsIO)
 					debug(0, "Error: Output packet size exceeded in CMD_READ_COINS\n");
 					return JVS_STATUS_ERROR;
 				}
-				outputPacket.data[outputPacket.length] = (jvsIO->state.coinCount[i] << 8) & 0x1F;
+				// Send coin count as 2 bytes (high byte with 5-bit limit, then low byte)
+				outputPacket.data[outputPacket.length] = (jvsIO->state.coinCount[i] >> 8) & 0x1F;
 				outputPacket.data[outputPacket.length + 1] = jvsIO->state.coinCount[i] & 0xFF;
 				outputPacket.length += 2;
 			}
