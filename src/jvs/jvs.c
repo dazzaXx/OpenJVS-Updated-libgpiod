@@ -712,8 +712,8 @@ JVSStatus readPacket(JVSPacket *packet)
 				const char *cmdName = getCommandName(byte);
 				debug(2, "%s(0x%02X) ", cmdName, byte);
 			}
-			if (packet->length > 11)
-				debug(2, "... ");
+			if (packet->length - 1 > 10)
+				debug(2, "...");
 			debug(2, "\n");
 		}
 		
