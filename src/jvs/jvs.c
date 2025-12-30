@@ -702,25 +702,18 @@ JVSStatus readPacket(JVSPacket *packet)
 		debug(2, "\n=== INPUT PACKET #%lu ===\n", ++packetCounter);
 		debug(2, "  Destination: 0x%02X  Length: %d bytes\n", packet->destination, packet->length);
 		
-		/* Show commands in packet */
+		/* Show potential commands in packet data */
 		if (packet->length > 1)
 		{
-			debug(2, "  Commands: ");
-			for (int i = 0; i < packet->length - 1; )
+			debug(2, "  Data bytes: ");
+			for (int i = 0; i < packet->length - 1 && i < 10; i++)
 			{
-				unsigned char cmd = packet->data[i];
-				debug(2, "%s(0x%02X) ", getCommandName(cmd), cmd);
-				
-				/* Skip past command and its arguments to find next command */
-				i++;
-				/* Simple heuristic: most commands are followed by their arguments */
-				/* For better parsing, we'd need full command structure knowledge */
-				if (i < packet->length - 1 && packet->data[i] < 0x10)
-				{
-					/* Likely an argument, skip it */
-					i++;
-				}
+				unsigned char byte = packet->data[i];
+				const char *cmdName = getCommandName(byte);
+				debug(2, "%s(0x%02X) ", cmdName, byte);
 			}
+			if (packet->length > 11)
+				debug(2, "... ");
 			debug(2, "\n");
 		}
 		
