@@ -227,6 +227,25 @@ static void *deviceThread(void *_args)
 
             args->inputs.absMax[axisIndex] = (double)absoluteFeatures.maximum;
             args->inputs.absMin[axisIndex] = (double)absoluteFeatures.minimum;
+            
+            /* Initialize analog axes with their current values to prevent random/stuck values
+             * This is especially important for triggers (ABS_Z, ABS_RZ) on Bluetooth controllers
+             * which may report stale values until the first input event is received */
+            if (args->inputs.absEnabled[axisIndex])
+            {
+                double scaled = ((double)absoluteFeatures.value - args->inputs.absMin[axisIndex]) / 
+                               (args->inputs.absMax[axisIndex] - args->inputs.absMin[axisIndex]);
+                
+                /* Clamp the value to valid range */
+                scaled = scaled > 1 ? 1 : scaled;
+                scaled = scaled < 0 ? 0 : scaled;
+                
+                /* Set initial value in JVS IO */
+                setAnalogue(args->jvsIO, args->inputs.abs[axisIndex].output, 
+                           args->inputs.abs[axisIndex].reverse ? 1 - scaled : scaled);
+                setGun(args->jvsIO, args->inputs.abs[axisIndex].output, 
+                      args->inputs.abs[axisIndex].reverse ? 1 - scaled : scaled);
+            }
         }
     }
 
@@ -242,10 +261,40 @@ static void *deviceThread(void *_args)
         tv.tv_sec = 0;
         tv.tv_usec = 2 * 1000;
 
-        if (select(fd + 1, &file_descriptor, NULL, NULL, &tv) < 1)
+        int select_result = select(fd + 1, &file_descriptor, NULL, NULL, &tv);
+        if (select_result < 0)
+        {
+            /* Select error - device likely disconnected */
+            if (errno == ENODEV || errno == ENOENT || errno == EBADF)
+            {
+                debug(1, "Info: Device disconnected (select error: %s)\n", strerror(errno));
+                break;
+            }
+            continue;
+        }
+        if (select_result < 1)
             continue;
 
-        if (read(fd, &event, sizeof(event)) == sizeof(event))
+        ssize_t bytes_read = read(fd, &event, sizeof(event));
+        if (bytes_read < 0)
+        {
+            /* Read error - check if device disconnected */
+            if (errno == ENODEV || errno == ENOENT)
+            {
+                debug(1, "Info: Device disconnected (read error: %s)\n", strerror(errno));
+                break;
+            }
+            /* Other errors - continue trying */
+            continue;
+        }
+        else if (bytes_read == 0)
+        {
+            /* EOF reached - device disconnected */
+            debug(1, "Info: Device disconnected (EOF)\n");
+            break;
+        }
+        
+        if (bytes_read == sizeof(event))
         {
             switch (event.type)
             {
