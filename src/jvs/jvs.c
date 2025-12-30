@@ -10,6 +10,56 @@ JVSPacket inputPacket, outputPacket;
 /* The in and out buffer used to read and write to and from */
 unsigned char outputBuffer[JVS_MAX_PACKET_SIZE], inputBuffer[JVS_MAX_PACKET_SIZE];
 
+/* Packet counter for debugging */
+static unsigned long packetCounter = 0;
+
+/**
+ * Get the name of a JVS command
+ *
+ * Returns a human-readable string for a given JVS command byte.
+ *
+ * @param cmd The command byte
+ * @returns A string containing the command name
+ */
+static const char *getCommandName(unsigned char cmd)
+{
+	switch (cmd)
+	{
+	case CMD_RESET: return "RESET";
+	case CMD_ASSIGN_ADDR: return "ASSIGN_ADDR";
+	case CMD_SET_COMMS_MODE: return "SET_COMMS_MODE";
+	case CMD_REQUEST_ID: return "REQUEST_ID";
+	case CMD_COMMAND_VERSION: return "COMMAND_VERSION";
+	case CMD_JVS_VERSION: return "JVS_VERSION";
+	case CMD_COMMS_VERSION: return "COMMS_VERSION";
+	case CMD_CAPABILITIES: return "CAPABILITIES";
+	case CMD_CONVEY_ID: return "CONVEY_ID";
+	case CMD_READ_SWITCHES: return "READ_SWITCHES";
+	case CMD_READ_COINS: return "READ_COINS";
+	case CMD_READ_ANALOGS: return "READ_ANALOGS";
+	case CMD_READ_ROTARY: return "READ_ROTARY";
+	case CMD_READ_KEYPAD: return "READ_KEYPAD";
+	case CMD_READ_LIGHTGUN: return "READ_LIGHTGUN";
+	case CMD_READ_GPI: return "READ_GPI";
+	case CMD_RETRANSMIT: return "RETRANSMIT";
+	case CMD_DECREASE_COINS: return "DECREASE_COINS";
+	case CMD_WRITE_GPO: return "WRITE_GPO";
+	case CMD_WRITE_ANALOG: return "WRITE_ANALOG";
+	case CMD_WRITE_DISPLAY: return "WRITE_DISPLAY";
+	case CMD_WRITE_COINS: return "WRITE_COINS";
+	case CMD_REMAINING_PAYOUT: return "REMAINING_PAYOUT";
+	case CMD_SET_PAYOUT: return "SET_PAYOUT";
+	case CMD_SUBTRACT_PAYOUT: return "SUBTRACT_PAYOUT";
+	case CMD_WRITE_GPO_BYTE: return "WRITE_GPO_BYTE";
+	case CMD_WRITE_GPO_BIT: return "WRITE_GPO_BIT";
+	case CMD_NAMCO_SPECIFIC: return "NAMCO_SPECIFIC";
+	default:
+		if (cmd >= CMD_MANUFACTURER_START && cmd <= CMD_MANUFACTURER_END)
+			return "MANUFACTURER_SPECIFIC";
+		return "UNKNOWN";
+	}
+}
+
 /**
  * Initialise the JVS emulation
  *
@@ -184,7 +234,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* The arcade hardware sends a reset command and we clear our memory */
 		case CMD_RESET:
 		{
-			debug(1, "CMD_RESET\n");
+			debug(1, "CMD_RESET - Resetting all devices\n");
 			size = 2;
 			jvsIO->deviceID = -1;
 			while (jvsIO->chainedIO != NULL)
@@ -199,7 +249,6 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* The arcade hardware assigns an address to our IO */
 		case CMD_ASSIGN_ADDR:
 		{
-			debug(1, "CMD_ASSIGN_ADDR\n");
 			size = 2;
 
 			JVSIO *ioToAssign = jvsIO;
@@ -209,6 +258,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			}
 
 			ioToAssign->deviceID = inputPacket.data[index + 1];
+			debug(1, "CMD_ASSIGN_ADDR - Assigning address 0x%02X\n", ioToAssign->deviceID);
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
 			if (jvsIO->deviceID != -1)
@@ -221,7 +271,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Ask for the name of the IO board */
 		case CMD_REQUEST_ID:
 		{
-			debug(1, "CMD_REQUEST_ID\n");
+			debug(1, "CMD_REQUEST_ID - Returning ID: %s\n", jvsIO->capabilities.name);
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			memcpy(&outputPacket.data[outputPacket.length + 1], jvsIO->capabilities.name, strlen(jvsIO->capabilities.name) + 1);
 			outputPacket.length += strlen(jvsIO->capabilities.name) + 2;
@@ -231,7 +281,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Asks for version information */
 		case CMD_COMMAND_VERSION:
 		{
-			debug(1, "CMD_COMMAND_VERSION\n");
+			debug(1, "CMD_COMMAND_VERSION - Returning version 0x%02X\n", jvsIO->capabilities.commandVersion);
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = jvsIO->capabilities.commandVersion;
 			outputPacket.length += 2;
@@ -241,7 +291,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Asks for version information */
 		case CMD_JVS_VERSION:
 		{
-			debug(1, "CMD_JVS_VERSION\n");
+			debug(1, "CMD_JVS_VERSION - Returning version 0x%02X\n", jvsIO->capabilities.jvsVersion);
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = jvsIO->capabilities.jvsVersion;
 			outputPacket.length += 2;
@@ -251,7 +301,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Asks for version information */
 		case CMD_COMMS_VERSION:
 		{
-			debug(1, "CMD_COMMS_VERSION\n");
+			debug(1, "CMD_COMMS_VERSION - Returning version 0x%02X\n", jvsIO->capabilities.commsVersion);
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = jvsIO->capabilities.commsVersion;
 			outputPacket.length += 2;
@@ -261,7 +311,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Asks what our IO board supports */
 		case CMD_CAPABILITIES:
 		{
-			debug(1, "CMD_CAPABILITIES\n");
+			debug(1, "CMD_CAPABILITIES - Returning capabilities\n");
 			writeFeatures(&outputPacket, &jvsIO->capabilities);
 		}
 		break;
@@ -269,8 +319,9 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Asks for the status of our IO boards switches */
 		case CMD_READ_SWITCHES:
 		{
-			debug(1, "CMD_READ_SWITCHES\n");
 			size = 3;
+			debug(1, "CMD_READ_SWITCHES - Players: %d, Switches: %d\n", 
+				inputPacket.data[index + 1], inputPacket.data[index + 2]);
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = jvsIO->state.inputSwitch[0];
 			outputPacket.length += 2;
@@ -286,9 +337,9 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_READ_COINS:
 		{
-			debug(1, "CMD_READ_COINS\n");
 			size = 2;
 			int numberCoinSlots = inputPacket.data[index + 1];
+			debug(1, "CMD_READ_COINS - Reading %d coin slot(s)\n", numberCoinSlots);
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
 			for (int i = 0; i < numberCoinSlots; i++)
@@ -302,12 +353,13 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_READ_ANALOGS:
 		{
-			debug(1, "CMD_READ_ANALOGS\n");
 			size = 2;
+			int numberChannels = inputPacket.data[index + 1];
+			debug(1, "CMD_READ_ANALOGS - Reading %d analog channel(s)\n", numberChannels);
 
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
-			for (int i = 0; i < inputPacket.data[index + 1]; i++)
+			for (int i = 0; i < numberChannels; i++)
 			{
 				/* By default left align the data */
 				int analogueData = jvsIO->state.analogueChannel[i] << jvsIO->analogueRestBits;
@@ -320,12 +372,13 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_READ_ROTARY:
 		{
-			debug(1, "CMD_READ_ROTARY\n");
 			size = 2;
+			int numberChannels = inputPacket.data[index + 1];
+			debug(1, "CMD_READ_ROTARY - Reading %d rotary channel(s)\n", numberChannels);
 
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
-			for (int i = 0; i < inputPacket.data[index + 1]; i++)
+			for (int i = 0; i < numberChannels; i++)
 			{
 				outputPacket.data[outputPacket.length] = jvsIO->state.rotaryChannel[i] >> 8;
 				outputPacket.data[outputPacket.length + 1] = jvsIO->state.rotaryChannel[i] & 0xFF;
@@ -336,7 +389,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_READ_KEYPAD:
 		{
-			debug(1, "CMD_READ_KEYPAD\n");
+			debug(1, "CMD_READ_KEYPAD - Reading keypad state\n");
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = 0x00;
 			outputPacket.length += 2;
@@ -345,8 +398,9 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_READ_GPI:
 		{
-			debug(1, "CMD_READ_GPI\n");
 			size = 2;
+			int numberBytes = inputPacket.data[index + 1];
+			debug(1, "CMD_READ_GPI - Reading %d byte(s) of GPI data\n", numberBytes);
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 			for (int i = 0; i < inputPacket.data[index + 1]; i++)
 			{
@@ -357,7 +411,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_REMAINING_PAYOUT:
 		{
-			debug(1, "CMD_REMAINING_PAYOUT\n");
+			debug(1, "CMD_REMAINING_PAYOUT - Returning payout status\n");
 			size = 2;
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.data[outputPacket.length + 1] = 0;
@@ -370,7 +424,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_SET_PAYOUT:
 		{
-			debug(1, "CMD_SET_PAYOUT\n");
+			debug(1, "CMD_SET_PAYOUT - Setting payout value\n");
 			size = 4;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
@@ -378,8 +432,9 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_GPO:
 		{
-			debug(1, "CMD_WRITE_GPO\n");
-			size = 2 + inputPacket.data[index + 1];
+			int numBytes = inputPacket.data[index + 1];
+			debug(1, "CMD_WRITE_GPO - Writing %d byte(s) to GPO\n", numBytes);
+			size = 2 + numBytes;
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
 			outputPacket.length += 1;
 		}
@@ -387,7 +442,8 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_GPO_BYTE:
 		{
-			debug(1, "CMD_WRITE_GPO_BYTE\n");
+			debug(1, "CMD_WRITE_GPO_BYTE - Byte %d = 0x%02X\n", 
+				inputPacket.data[index + 1], inputPacket.data[index + 2]);
 			size = 3;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
@@ -395,7 +451,8 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_GPO_BIT:
 		{
-			debug(1, "CMD_WRITE_GPO_BIT\n");
+			debug(1, "CMD_WRITE_GPO_BIT - Byte %d, Bit %d\n", 
+				inputPacket.data[index + 1], inputPacket.data[index + 2]);
 			size = 3;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
@@ -403,15 +460,16 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_ANALOG:
 		{
-			debug(1, "CMD_WRITE_ANALOG\n");
-			size = inputPacket.data[index + 1] * 2 + 2;
+			int numChannels = inputPacket.data[index + 1];
+			debug(1, "CMD_WRITE_ANALOG - Writing %d analog channel(s)\n", numChannels);
+			size = numChannels * 2 + 2;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
 		break;
 
 		case CMD_SUBTRACT_PAYOUT:
 		{
-			debug(1, "CMD_SUBTRACT_PAYOUT\n");
+			debug(1, "CMD_SUBTRACT_PAYOUT - Subtracting payout\n");
 			size = 3;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
@@ -419,11 +477,11 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_COINS:
 		{
-			debug(1, "CMD_WRITE_COINS\n");
 			size = 4;
 			// - 1 because JVS is 1-indexed, but our array is 0-indexed
 			int slot_index = inputPacket.data[index + 1] - 1;
 			int coin_increment = ((int)(inputPacket.data[index + 3]) | ((int)(inputPacket.data[index + 2]) << 8));
+			debug(1, "CMD_WRITE_COINS - Slot %d, incrementing by %d\n", slot_index + 1, coin_increment);
 
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
@@ -436,7 +494,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_WRITE_DISPLAY:
 		{
-			debug(1, "CMD_WRITE_DISPLAY\n");
+			debug(1, "CMD_WRITE_DISPLAY - Writing display data\n");
 			size = (inputPacket.data[index + 1] * 2) + 2;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 		}
@@ -444,11 +502,11 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_DECREASE_COINS:
 		{
-			debug(1, "CMD_DECREASE_COINS\n");
 			size = 4;
 			// - 1 because JVS is 1-indexed, but our array is 0-indexed
 			int slot_index = inputPacket.data[index + 1] - 1;
 			int coin_decrement = ((int)(inputPacket.data[index + 3]) | ((int)(inputPacket.data[index + 2]) << 8));
+			debug(1, "CMD_DECREASE_COINS - Slot %d, decrementing by %d\n", slot_index + 1, coin_decrement);
 
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
@@ -461,7 +519,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		case CMD_CONVEY_ID:
 		{
-			debug(1, "CMD_CONVEY_ID\n");
+			debug(1, "CMD_CONVEY_ID - Receiving main board ID\n");
 			size = 1;
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 			char idData[100];
@@ -472,14 +530,14 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				if (!inputPacket.data[index + i])
 					break;
 			}
-			debug(0, "CMD_CONVEY_ID = %s\n", idData);
+			debug(0, "CMD_CONVEY_ID - Main board ID: %s\n", idData);
 		}
 		break;
 
 		/* The touch screen and light gun input, simply using analogue channels */
 		case CMD_READ_LIGHTGUN:
 		{
-			debug(1, "CMD_READ_LIGHTGUN\n");
+			debug(1, "CMD_READ_LIGHTGUN - Reading light gun position\n");
 			size = 2;
 
 			int analogueXData = jvsIO->state.gunChannel[0] << jvsIO->gunXRestBits;
@@ -496,7 +554,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		/* Namco Specific */
 		case CMD_NAMCO_SPECIFIC:
 		{
-			debug(1, "CMD_NAMCO_SPECIFIC\n");
+			debug(1, "CMD_NAMCO_SPECIFIC - Processing Namco command\n");
 
 			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
 
@@ -549,7 +607,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 			default:
 			{
-				debug(0, "CMD_NAMCO_UNSUPPORTED (Unsupported namco command [0x%02hhX])", inputPacket.data[index + 1]);
+				debug(0, "CMD_NAMCO_UNSUPPORTED - Unsupported Namco command: 0x%02hhX\n", inputPacket.data[index + 1]);
 			}
 			}
 		}
@@ -557,7 +615,7 @@ JVSStatus processPacket(JVSIO *jvsIO)
 
 		default:
 		{
-			debug(0, "CMD_UNSUPPORTED (Unsupported command [0x%02hhX])\n", inputPacket.data[index]);
+			debug(0, "CMD_UNSUPPORTED - Unsupported command: 0x%02hhX\n", inputPacket.data[index]);
 		}
 		}
 		index += size;
@@ -646,8 +704,34 @@ JVSStatus readPacket(JVSPacket *packet)
 		}
 	}
 
-	debug(2, "INPUT:\n");
-	debugBuffer(2, inputBuffer, index);
+	/* Only compute debug output if debug level is high enough */
+	if (getDebugLevel() >= 2)
+	{
+		debug(2, "\n=== INPUT PACKET #%lu ===\n", ++packetCounter);
+		debug(2, "  Destination: 0x%02X  Length: %d bytes\n", packet->destination, packet->length);
+		
+		/* Show potential commands in packet data 
+		 * Note: Only the first byte is typically a command, subsequent bytes are usually
+		 * parameters/arguments. This shows what each byte COULD mean if interpreted as
+		 * a command, which helps identify actual command bytes vs arguments (UNKNOWN).
+		 */
+		if (packet->length > 1)
+		{
+			debug(2, "  Data bytes: ");
+			for (int i = 0; i < packet->length - 1 && i < 10; i++)
+			{
+				unsigned char byte = packet->data[i];
+				const char *cmdName = getCommandName(byte);
+				debug(2, "%s(0x%02X) ", cmdName, byte);
+			}
+			if (packet->length - 1 > 10)
+				debug(2, "...");
+			debug(2, "\n");
+		}
+		
+		debug(2, "  Raw data: ");
+		debugBuffer(2, inputBuffer, index);
+	}
 
 	return JVS_STATUS_SUCCESS;
 }
@@ -703,8 +787,14 @@ JVSStatus writePacket(JVSPacket *packet)
 		outputBuffer[outputIndex++] = checksum;
 	}
 
-	debug(2, "OUTPUT:\n");
-	debugBuffer(2, outputBuffer, outputIndex);
+	/* Only compute debug output if debug level is high enough */
+	if (getDebugLevel() >= 2)
+	{
+		debug(2, "\n=== OUTPUT PACKET #%lu ===\n", packetCounter);
+		debug(2, "  Destination: 0x%02X  Length: %d bytes\n", packet->destination, packet->length);
+		debug(2, "  Raw data: ");
+		debugBuffer(2, outputBuffer, outputIndex);
+	}
 
 	int written = 0, timeout = 0;
 	while (written < outputIndex)
