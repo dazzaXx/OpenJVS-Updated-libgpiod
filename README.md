@@ -174,7 +174,7 @@ hcitool dev
 - If Bluetooth stops working after enabling additional UARTs, make sure you didn't disable it with `dtoverlay=disable-bt`
 - If you can't find `/boot/firmware/config.txt`, try `/boot/config.txt` (location varies by OS version)
 - Always reboot after changing `/boot/firmware/config.txt` or `/boot/config.txt`
-- Some UART overlays may conflict with GPIO pins used for other purposes (like the sense line on GPIO 12)
+- **Important for sense line users**: The `uart5` overlay uses GPIO 12 and 13, which conflicts with the default sense line pin (GPIO 12). If you're using the sense line, avoid enabling `uart5` or change your sense line pin in the ModernJVS config to a different GPIO pin
 
 ## Configuration
 
