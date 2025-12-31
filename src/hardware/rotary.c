@@ -49,15 +49,27 @@ JVSRotaryStatus initRotary(void)
  * Returns the value from 0 to 15 for
  * which map to use.
  * 
- * @returns The value from 0 to 15 on the rotary encoder
+ * @returns The value from 0 to 15 on the rotary encoder, or -1 on error
  */
 int getRotaryValue(void)
 {
+    int bit0 = readGPIO(18);
+    int bit1 = readGPIO(19);
+    int bit2 = readGPIO(20);
+    int bit3 = readGPIO(21);
+    
+    /* Check for GPIO read errors */
+    if (bit0 < 0 || bit1 < 0 || bit2 < 0 || bit3 < 0)
+    {
+        debug(1, "Warning: Failed to read GPIO pins for rotary encoder\n");
+        return -1;
+    }
+    
     int value = 0;
-    value = value | readGPIO(18) << 0;
-    value = value | readGPIO(19) << 1;
-    value = value | readGPIO(20) << 2;
-    value = value | readGPIO(21) << 3;
+    value = value | (bit0 << 0);
+    value = value | (bit1 << 1);
+    value = value | (bit2 << 2);
+    value = value | (bit3 << 3);
 
     value = ~value & 0x0F;
 
