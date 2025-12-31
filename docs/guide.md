@@ -61,8 +61,8 @@ To install ModernJVS follow the instructions below to install the required packa
 
 ```
 sudo apt install git cmake
-git clone https://github.com/OpenJVS/OpenJVS
-cd OpenJVS
+git clone https://github.com/dazzaXx/OpenJVS-Updated-libgpiod
+cd OpenJVS-Updated-libgpiod
 make
 ```
 
