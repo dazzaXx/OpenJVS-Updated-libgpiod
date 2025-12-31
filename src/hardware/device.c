@@ -23,8 +23,12 @@ static int detect_gpio_chip_number(void)
   if (model_file)
   {
     char model[128];
+    // fgets ensures null-termination and reads at most sizeof(model)-1 chars
     if (fgets(model, sizeof(model), model_file))
     {
+      // Ensure null termination
+      model[sizeof(model) - 1] = '\0';
+      
       // Check if it's a Raspberry Pi 5
       if (strstr(model, "Raspberry Pi 5"))
       {
@@ -40,7 +44,8 @@ static int detect_gpio_chip_number(void)
   // Fallback: Try probing chips in order of likelihood
   // Check gpiochip0 first (Pi 1-4), then gpiochip4 (Pi 5), then others
   int chip_candidates[] = {0, 4, 1, 2, 3};
-  for (int i = 0; i < 5; i++)
+  int num_candidates = sizeof(chip_candidates) / sizeof(chip_candidates[0]);
+  for (int i = 0; i < num_candidates; i++)
   {
     int chip_num = chip_candidates[i];
     char chip_path[32];
@@ -57,9 +62,10 @@ static int detect_gpio_chip_number(void)
       // Verify this chip has standard GPIO pins (12, 18, or 27)
       // These are commonly used pins on all Raspberry Pi models
       int test_pins[] = {12, 18, 27};
+      int num_test_pins = sizeof(test_pins) / sizeof(test_pins[0]);
       int valid = 0;
       
-      for (int j = 0; j < 3; j++)
+      for (int j = 0; j < num_test_pins; j++)
       {
 #ifdef GPIOD_API_V2
         struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, test_pins[j]);
