@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "jvs/io.h"
+#include "console/debug.h"
 
 static char *getNextToken(char *buffer, char *separator, char **saveptr)
 {
@@ -523,6 +524,13 @@ JVSConfigStatus parseRotary(char *path, int rotary, char *output)
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
+
+    /* Validate rotary value is in valid range */
+    if (rotary < 0 || rotary >= 16)
+    {
+        debug(1, "Warning: Invalid rotary value %d, using 0\n", rotary);
+        rotary = 0;
+    }
 
     if ((file = fopen(path, "r")) == NULL)
         return JVS_CONFIG_STATUS_FILE_NOT_FOUND;

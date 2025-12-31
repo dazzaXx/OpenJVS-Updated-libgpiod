@@ -110,14 +110,23 @@ int disconnectJVS(void)
  * @param arg0 The first argument of the capability
  * @param arg1 The second argument of the capability
  * @param arg2 The final argument of the capability
+ * @returns 1 on success, 0 if buffer would overflow
  */
-static void writeFeature(JVSPacket *packet, char capability, char arg0, char arg1, char arg2)
+static int writeFeature(JVSPacket *packet, char capability, char arg0, char arg1, char arg2)
 {
+	/* Check if there's enough space in the packet buffer */
+	if (packet->length + 4 > JVS_MAX_PACKET_SIZE)
+	{
+		debug(0, "Error: Packet buffer overflow prevented in writeFeature\n");
+		return 0;
+	}
+	
 	packet->data[packet->length] = capability;
 	packet->data[packet->length + 1] = arg0;
 	packet->data[packet->length + 2] = arg1;
 	packet->data[packet->length + 3] = arg2;
 	packet->length += 4;
+	return 1;
 }
 
 /**
@@ -272,9 +281,24 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		case CMD_REQUEST_ID:
 		{
 			debug(1, "CMD_REQUEST_ID - Returning ID: %s\n", jvsIO->capabilities.name);
+			size_t nameLen = strlen(jvsIO->capabilities.name) + 1;  // +1 for null terminator
+			size_t availableSpace = JVS_MAX_PACKET_SIZE - outputPacket.length - 1;  // -1 for REPORT_SUCCESS
+			
+			/* Check if the name fits in the packet buffer */
+			if (nameLen > availableSpace)
+			{
+				debug(0, "Warning: Name too long for packet buffer, truncating\n");
+				nameLen = availableSpace;
+			}
+			
 			outputPacket.data[outputPacket.length] = REPORT_SUCCESS;
-			memcpy(&outputPacket.data[outputPacket.length + 1], jvsIO->capabilities.name, strlen(jvsIO->capabilities.name) + 1);
-			outputPacket.length += strlen(jvsIO->capabilities.name) + 2;
+			memcpy(&outputPacket.data[outputPacket.length + 1], jvsIO->capabilities.name, nameLen);
+			/* Ensure null termination even if truncated */
+			if (nameLen > 0)
+			{
+				outputPacket.data[outputPacket.length + nameLen] = '\0';
+			}
+			outputPacket.length += nameLen + 1;
 		}
 		break;
 
