@@ -7,6 +7,8 @@
 #define GPIO_CONSUMER_NAME "openjvs"
 
 // Static variable to cache the detected GPIO chip number
+// Note: This is initialized during startup before any threads are created,
+// so thread safety is not a concern in practice.
 static int detected_gpio_chip_number = -1;
 
 // Function to detect the correct GPIO chip number
@@ -35,10 +37,12 @@ static int detect_gpio_chip_number(void)
     fclose(model_file);
   }
 
-  // Fallback: Try probing gpiochip0 first (Pi 1-4), then gpiochip4 (Pi 5)
-  // We verify by checking if we can open the chip
-  for (int chip_num = 0; chip_num <= 4; chip_num++)
+  // Fallback: Try probing chips in order of likelihood
+  // Check gpiochip0 first (Pi 1-4), then gpiochip4 (Pi 5), then others
+  int chip_candidates[] = {0, 4, 1, 2, 3};
+  for (int i = 0; i < 5; i++)
   {
+    int chip_num = chip_candidates[i];
     char chip_path[32];
     snprintf(chip_path, sizeof(chip_path), "/dev/gpiochip%d", chip_num);
     
@@ -50,19 +54,34 @@ static int detect_gpio_chip_number(void)
     
     if (chip)
     {
-      // Verify this chip has GPIO pins we expect (e.g., pin 12 for sense line)
+      // Verify this chip has standard GPIO pins (12, 18, or 27)
+      // These are commonly used pins on all Raspberry Pi models
+      int test_pins[] = {12, 18, 27};
+      int valid = 0;
+      
+      for (int j = 0; j < 3; j++)
+      {
 #ifdef GPIOD_API_V2
-      struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, 12);
-      int has_pin = (info != NULL);
-      if (info)
-        gpiod_line_info_free(info);
+        struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, test_pins[j]);
+        if (info)
+        {
+          valid = 1;
+          gpiod_line_info_free(info);
+          break;
+        }
 #else
-      struct gpiod_line *line = gpiod_chip_get_line(chip, 12);
-      int has_pin = (line != NULL);
+        struct gpiod_line *line = gpiod_chip_get_line(chip, test_pins[j]);
+        if (line)
+        {
+          valid = 1;
+          break;
+        }
 #endif
+      }
+      
       gpiod_chip_close(chip);
       
-      if (has_pin)
+      if (valid)
       {
         debug(1, "Auto-detected GPIO chip: gpiochip%d\n", chip_num);
         detected_gpio_chip_number = chip_num;
