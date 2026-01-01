@@ -186,6 +186,14 @@ int closeDevice(void)
   }
   current_pin = -1;
   current_direction = -1;
+#else
+  // Clean up libgpiod v1 cached chip
+  if (cached_chip_v1)
+  {
+    gpiod_chip_close(cached_chip_v1);
+    cached_chip_v1 = NULL;
+    cached_chip_number_v1 = -1;
+  }
 #endif
 #endif
   
@@ -556,37 +564,57 @@ int readGPIO(int pin)
 #else
 // libgpiod v1 API implementation
 
+// Cache the GPIO chip handle to avoid repeated open/close operations
+static struct gpiod_chip *cached_chip_v1 = NULL;
+static int cached_chip_number_v1 = -1;
+
+// Helper function to get or open the cached chip
+static struct gpiod_chip *get_cached_chip_v1(void)
+{
+  int chip_number = detect_gpio_chip_number();
+  
+  // If chip is already open and matches the detected number, reuse it
+  if (cached_chip_v1 && cached_chip_number_v1 == chip_number)
+    return cached_chip_v1;
+  
+  // Close old chip if it exists and chip number has changed
+  if (cached_chip_v1 && cached_chip_number_v1 != chip_number)
+  {
+    gpiod_chip_close(cached_chip_v1);
+    cached_chip_v1 = NULL;
+  }
+  
+  // Open new chip
+  cached_chip_v1 = gpiod_chip_open_by_number(chip_number);
+  if (cached_chip_v1)
+    cached_chip_number_v1 = chip_number;
+  
+  return cached_chip_v1;
+}
+
 int setupGPIO(int pin)
 {
   // With libgpiod, we don't need to export the GPIO pin
   // The character device interface handles this automatically
   // We just verify we can open the chip
-  int chip_number = detect_gpio_chip_number();
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(chip_number);
+  struct gpiod_chip *chip = get_cached_chip_v1();
   if (!chip)
     return 0;
   
   // Verify the line exists
   struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
-  int result = (line != NULL) ? 1 : 0;
-  
-  gpiod_chip_close(chip);
-  return result;
+  return (line != NULL) ? 1 : 0;
 }
 
 int setGPIODirection(int pin, int dir)
 {
-  int chip_number = detect_gpio_chip_number();
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(chip_number);
+  struct gpiod_chip *chip = get_cached_chip_v1();
   if (!chip)
     return 0;
   
   struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
   if (!line)
-  {
-    gpiod_chip_close(chip);
     return 0;
-  }
   
   int result;
   if (dir == IN)
@@ -598,54 +626,40 @@ int setGPIODirection(int pin, int dir)
     result = gpiod_line_request_output(line, GPIO_CONSUMER_NAME, 0);
   }
   
-  gpiod_chip_close(chip);
   return (result == 0) ? 1 : 0;
 }
 
 int writeGPIO(int pin, int value)
 {
-  int chip_number = detect_gpio_chip_number();
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(chip_number);
+  struct gpiod_chip *chip = get_cached_chip_v1();
   if (!chip)
     return 0;
   
   struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
   if (!line)
-  {
-    gpiod_chip_close(chip);
     return 0;
-  }
   
   // Request the line as output with the desired value
   int result = gpiod_line_request_output(line, GPIO_CONSUMER_NAME, value == LOW ? 0 : 1);
   
-  gpiod_chip_close(chip);
   return (result == 0) ? 1 : 0;
 }
 
 int readGPIO(int pin)
 {
-  int chip_number = detect_gpio_chip_number();
-  struct gpiod_chip *chip = gpiod_chip_open_by_number(chip_number);
+  struct gpiod_chip *chip = get_cached_chip_v1();
   if (!chip)
     return -1;
   
   struct gpiod_line *line = gpiod_chip_get_line(chip, pin);
   if (!line)
-  {
-    gpiod_chip_close(chip);
     return -1;
-  }
   
   // Request the line as input
   if (gpiod_line_request_input(line, GPIO_CONSUMER_NAME) != 0)
-  {
-    gpiod_chip_close(chip);
     return -1;
-  }
   
   int value = gpiod_line_get_value(line);
-  gpiod_chip_close(chip);
   
   return value;
 }
