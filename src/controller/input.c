@@ -578,6 +578,14 @@ static int shouldFilterDevice(const char *deviceName)
     return 0;
 }
 
+/* Comparison function for qsort - sorts devices by physical location */
+static int compare_devices(const void *a, const void *b)
+{
+    const Device *dev_a = (const Device *)a;
+    const Device *dev_b = (const Device *)b;
+    return strcmp(dev_a->physicalLocation, dev_b->physicalLocation);
+}
+
 int getNumberOfDevices(void)
 {
     struct dirent **namelist = NULL;
@@ -727,18 +735,10 @@ JVSInputStatus getInputs(DeviceList *deviceList)
 
     deviceList->length = validDeviceIndex;
 
-    for (int i = 0; i < deviceList->length - 1; i++)
+    /* Use qsort instead of bubble sort for O(n log n) performance */
+    if (deviceList->length > 1)
     {
-        for (int j = 0; j < deviceList->length - 1 - i; j++)
-        {
-            Device tmp;
-            if (strcmp(deviceList->devices[j].physicalLocation, deviceList->devices[j + 1].physicalLocation) > 0)
-            {
-                tmp = deviceList->devices[j];
-                deviceList->devices[j] = deviceList->devices[j + 1];
-                deviceList->devices[j + 1] = tmp;
-            }
-        }
+        qsort(deviceList->devices, deviceList->length, sizeof(Device), compare_devices);
     }
 
     return JVS_INPUT_STATUS_SUCCESS;

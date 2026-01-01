@@ -13,7 +13,9 @@ static char *getNextToken(char *buffer, char *separator, char **saveptr)
     if (token == NULL)
         return NULL;
 
-    for (int i = 0; i < (int)strlen(token); i++)
+    /* Cache strlen result to avoid recalculating in loop */
+    int token_len = (int)strlen(token);
+    for (int i = 0; i < token_len; i++)
     {
         if ((token[i] == '\n') || (token[i] == '\r'))
         {
