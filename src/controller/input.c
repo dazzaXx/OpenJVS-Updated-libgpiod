@@ -230,12 +230,14 @@ static void *deviceThread(void *_args)
         }
     }
 
-    /* Initialize analog axis values to their current hardware position */
+    /* Initialize analog axis values to their current hardware position
+     * This includes analog sticks (X, Y) and triggers (Z, R, L, T) to ensure
+     * racing games and other applications see correct values before first input event */
     for (int axisIndex = 0; axisIndex < ABS_MAX; ++axisIndex)
     {
         if (test_bit(axisIndex, absoluteBitmask) && args->inputs.absEnabled[axisIndex])
         {
-            /* Skip HAT and SWITCH types - only initialize ANALOGUE type axes */
+            /* Skip HAT and SWITCH types - only initialize ANALOGUE type axes (sticks and triggers) */
             if (args->inputs.abs[axisIndex].type != ANALOGUE)
                 continue;
 
@@ -252,7 +254,8 @@ static void *deviceThread(void *_args)
             scaled = scaled > 1 ? 1 : scaled;
             scaled = scaled < 0 ? 0 : scaled;
 
-            /* Apply deadzone logic (same as in event loop) */
+            /* Apply deadzone logic to analog sticks only (same as in event loop)
+             * Note: Triggers (Z, R, L, T) do not get deadzone applied */
             if (args->analogDeadzone > 0 && args->analogDeadzone < MAX_ANALOG_DEADZONE &&
                 (args->player >= 1 && args->player <= 4) &&
                 (args->inputs.abs[axisIndex].input == CONTROLLER_ANALOGUE_X || 
