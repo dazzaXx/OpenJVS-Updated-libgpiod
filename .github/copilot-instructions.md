@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-ModernJVS is a fork of OpenJVS - an emulator for I/O boards in arcade machines that use the JVS (JAMMA Video Standard) protocol. The software runs on Raspberry Pi devices (including Pi 5) and requires a USB RS485 converter or an official OpenJVS HAT to communicate with arcade hardware.
+ModernJVS is a fork of OpenJVS - an emulator for I/O (input/output) boards in arcade machines that use the JVS (JAMMA Video Standard) protocol. These I/O boards handle communication between arcade controls (buttons, joysticks, coin slots) and the game system. The software runs on Raspberry Pi devices (including Pi 5) and requires a USB RS485 converter or an official OpenJVS HAT to communicate with arcade hardware.
 
 **Key Capabilities:**
 - Emulates various arcade I/O boards (Namco, Sega Naomi, Triforce, Chihiro, etc.)
@@ -24,11 +24,13 @@ ModernJVS is a fork of OpenJVS - an emulator for I/O boards in arcade machines t
 ```bash
 # Standard build
 make                # Creates build/ directory and runs cmake + make
-sudo make install   # Builds DEB package and installs via dpkg
+sudo make install   # Builds DEB package and installs via dpkg (requires root, installs to /usr/bin and /etc)
 
 # Clean build
 make clean          # Removes build/ directory
 ```
+
+**Note**: Installation requires root privileges as it installs systemd services and configuration files system-wide.
 
 The build system uses:
 - **Makefile**: Top-level wrapper that creates build directory and invokes CMake
@@ -154,7 +156,10 @@ Additional config directories:
 - Falls back to sysfs on older systems
 
 ### Arcade Boards Supported
-Namco (FCA1, System 22/23, System 2x6), Sega (Naomi 1/2, Triforce, Chihiro, Hikaru, Lindbergh, Ringedge 1/2), Taito (Type X+, Type X2), exA-Arcadia
+- **Namco**: FCA1, System 22/23, System 2x6
+- **Sega**: Naomi 1/2, Triforce, Chihiro, Hikaru, Lindbergh, Ringedge 1/2
+- **Taito**: Type X+, Type X2
+- **exA-Arcadia**
 
 ## Testing
 
