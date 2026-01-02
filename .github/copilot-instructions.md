@@ -176,7 +176,7 @@ Currently no automated test suite exists. Manual testing involves:
 GitHub Actions workflow (`.github/workflows/build.yml`):
 - Triggers on push and pull requests
 - Builds on Ubuntu latest
-- Uploads build artifacts (Note: artifact name is currently 'openjvs' - legacy name from fork)
+- Uploads build artifacts as 'modernjvs'
 - Does NOT run automated tests (manual testing only)
 
 ## Dependencies
