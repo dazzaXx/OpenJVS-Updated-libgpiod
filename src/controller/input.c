@@ -448,7 +448,37 @@ static void *deviceThread(void *_args)
                           event.code, event.value, args->inputs.absMin[event.code], 
                           args->inputs.absMax[event.code], args->inputs.absMultiplier[event.code]);
                     
-                    double scaled = ((double)((double)event.value * (double)args->inputs.absMultiplier[event.code]) - args->inputs.absMin[event.code]) / (args->inputs.absMax[event.code] - args->inputs.absMin[event.code]);
+                    /* Dynamically expand bounds if we receive values outside configured range
+                     * This fixes the gas trigger stuck issue caused by misconfigured min/max values */
+                    double rawScaled = (double)event.value * (double)args->inputs.absMultiplier[event.code];
+                    
+                    if (rawScaled < args->inputs.absMin[event.code])
+                    {
+                        debug(2, "Info: Expanding analog axis %d min from %.0f to %.0f (raw=%d)\n",
+                              event.code, args->inputs.absMin[event.code], rawScaled, event.value);
+                        args->inputs.absMin[event.code] = rawScaled;
+                    }
+                    else if (rawScaled > args->inputs.absMax[event.code])
+                    {
+                        debug(2, "Info: Expanding analog axis %d max from %.0f to %.0f (raw=%d)\n",
+                              event.code, args->inputs.absMax[event.code], rawScaled, event.value);
+                        args->inputs.absMax[event.code] = rawScaled;
+                    }
+                    
+                    /* Prevent division by zero - if range is still invalid, use raw value directly */
+                    double range = args->inputs.absMax[event.code] - args->inputs.absMin[event.code];
+                    double scaled;
+                    
+                    if (range > 0.001)
+                    {
+                        scaled = (rawScaled - args->inputs.absMin[event.code]) / range;
+                    }
+                    else
+                    {
+                        /* Invalid range - map to 0.5 (center) to avoid stuck values */
+                        debug(2, "Warning: Analog axis %d has zero range, using center value\n", event.code);
+                        scaled = 0.5;
+                    }
 
                     /* Log scaled value before clamping */
                     debug(3, "Analog axis %d: scaled_before_clamp=%.3f\n", event.code, scaled);
