@@ -628,6 +628,26 @@ JVSStatus processPacket(JVSIO *jvsIO)
 		}
 		break;
 
+		/* SEGA Manufacturer Specific (0x60-0x6F) - Force Feedback */
+		/* Handle all SEGA FFB commands by responding with success */
+		case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67:
+		case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F:
+		{
+			debug(1, "CMD_SEGA_SPECIFIC - Processing SEGA FFB command 0x%02X\n", inputPacket.data[index]);
+			
+			// SEGA FFB commands: just respond with success
+			// The emulation tracks these for potential future use but doesn't
+			// need to return complex data like NAMCO commands
+			outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
+			
+			// Most SEGA commands are 1 byte (just the command)
+			// Some may have parameters, but we handle them generically
+			size = 1;
+			
+			debug(2, "FFB: SEGA command 0x%02X handled with success response\n", inputPacket.data[index]);
+		}
+		break;
+
 		/* Namco Specific */
 		case CMD_NAMCO_SPECIFIC:
 		{
