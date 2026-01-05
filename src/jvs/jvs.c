@@ -698,8 +698,11 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			{
 				// Parse direction from command data first to determine packet length
 				// NAMCO 0x31 format: [0x70] [0x31] [direction_byte] [additional_params...]
+				// According to NAMCO protocol: direction 0x00 (center) has no additional params,
+				// other directions have 1 additional parameter byte (likely strength/speed)
 				
 				// First verify we have at least the direction byte
+				// Need: index (0x70) + 1 (0x31) + 1 (direction) = index+3 bytes minimum
 				if (index + 3 > inputPacket.length) {
 					debug(0, "FFB: Error - command 0x31 packet too short for direction byte\n");
 					break;
@@ -707,12 +710,15 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				
 				unsigned char direction = inputPacket.data[index + 2];
 				
-				// Determine expected parameter count based on direction
+				// Determine total parameter count (direction byte + additional params)
+				// Center (0x00): direction only (1 byte total)
+				// Left/Right: direction + strength (2 bytes total)
 				int paramCount = (direction == 0x00) ? 1 : 2;
 				
 				// Verify packet has enough data for all parameters
+				// Need: index (0x70) + 1 (0x31) + paramCount = index + 2 + paramCount bytes
 				if (index + 2 + paramCount > inputPacket.length) {
-					debug(0, "FFB: Error - command 0x31 packet too short for %d parameters\n", paramCount);
+					debug(0, "FFB: Error - command 0x31 packet too short for %d parameter bytes\n", paramCount);
 					break;
 				}
 				
