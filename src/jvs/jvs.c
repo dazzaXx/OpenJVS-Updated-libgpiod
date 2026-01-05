@@ -777,18 +777,19 @@ JVSStatus processPacket(JVSIO *jvsIO)
 						unsigned char statusResponse[16];
 						int statusLen = getEmulatedStatus(globalFFBState, statusResponse, sizeof(statusResponse));
 						
-						if (statusLen > 0)
+						if (statusLen > 0 && (outputPacket.length + statusLen) < JVS_MAX_PACKET_SIZE)
 						{
-							for (int i = 0; i < statusLen && outputPacket.length < JVS_MAX_PACKET_SIZE; i++)
+							for (int i = 0; i < statusLen; i++)
 							{
 								outputPacket.data[outputPacket.length++] = statusResponse[i];
 							}
 						}
-						else
+						else if (statusLen <= 0)
 						{
 							// Fallback: simple success response
 							outputPacket.data[outputPacket.length++] = 0x01;
 						}
+						// If buffer would overflow, don't add anything (packet will fail checksum)
 					}
 					else
 					{

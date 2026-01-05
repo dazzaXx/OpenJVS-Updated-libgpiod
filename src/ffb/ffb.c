@@ -556,10 +556,10 @@ void updateEmulatedPosition(FFBState *state)
     long elapsed = currentTime - state->lastCommandTime;
     
     // Simulate gradual movement toward target position
-    // Rate: approximately 100 units per 100ms
+    // Rate: approximately 100 units per 100ms (1 unit per ms)
     if (state->currentPosition < state->targetPosition)
     {
-        int delta = (elapsed * 100) / 100; // 100 units per 100ms
+        int delta = (int)elapsed; // 1:1 rate for now
         if (delta > 0)
         {
             state->currentPosition += delta;
@@ -569,7 +569,7 @@ void updateEmulatedPosition(FFBState *state)
     }
     else if (state->currentPosition > state->targetPosition)
     {
-        int delta = (elapsed * 100) / 100;
+        int delta = (int)elapsed;
         if (delta > 0)
         {
             state->currentPosition -= delta;
@@ -594,9 +594,10 @@ void trackFFBCommand(FFBState *state, const unsigned char *data, int length)
     state->lastCommandTime = getTimeMs();
     
     // Store command data
-    if (length > (int)sizeof(state->lastCommand))
-        length = sizeof(state->lastCommand);
-    memcpy(state->lastCommand, data, length);
+    size_t maxLen = sizeof(state->lastCommand);
+    if ((size_t)length > maxLen)
+        length = (int)maxLen;
+    memcpy(state->lastCommand, data, (size_t)length);
     state->lastCommandLength = length;
     
     // Parse command to update target position
@@ -678,7 +679,9 @@ int getEmulatedStatus(FFBState *state, unsigned char *response, int maxLen)
     }
     
     // Convert position (-100 to 100) to 16-bit value (0x0000 to 0xFFFF, center = 0x8000)
-    int position16 = 0x8000 + (state->currentPosition * 0x7FFF / 100);
+    // Avoid overflow by doing division first: position16 = 0x8000 + (currentPosition * (0x7FFF / 100))
+    int scaledPosition = (state->currentPosition * 327); // 0x7FFF / 100 ≈ 327
+    int position16 = 0x8000 + scaledPosition;
     if (position16 < 0)
         position16 = 0;
     if (position16 > 0xFFFF)
