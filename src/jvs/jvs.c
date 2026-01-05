@@ -697,9 +697,10 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			case 0x31:
 			{
 				// Parse direction from command data first to determine packet length
-				// NAMCO 0x31 format: [0x70] [0x31] [direction_byte] [additional_params...]
-				// According to NAMCO protocol: direction 0x00 (center) has no additional params,
-				// other directions have 1 additional parameter byte (likely strength/speed)
+				// NAMCO 0x31 format: [0x70] [0x31] [direction_byte] [additional_param_if_not_center]
+				// Protocol observation: direction 0x00 (center) has no additional params,
+				// other directions have 1 additional parameter byte (purpose undocumented,
+				// possibly strength/speed/duration - exact meaning unknown but must be consumed)
 				
 				// First verify we have at least the direction byte
 				// Need: index (0x70) + 1 (0x31) + 1 (direction) = index+3 bytes minimum
@@ -711,8 +712,10 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				unsigned char direction = inputPacket.data[index + 2];
 				
 				// Determine total parameter count (direction byte + additional params)
-				// Center (0x00): direction only (1 byte total)
-				// Left/Right: direction + strength (2 bytes total)
+				// Based on observed NAMCO protocol behavior:
+				// - Center (0x00): direction only (1 byte total)
+				// - Left/Right (non-0x00): direction + 1 additional byte (2 bytes total)
+				// This binary assumption works for Ridge Racer V and similar NAMCO games
 				int paramCount = (direction == 0x00) ? 1 : 2;
 				
 				// Verify packet has enough data for all parameters
