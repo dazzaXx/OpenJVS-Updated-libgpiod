@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <linux/input.h>
 #include <errno.h>
+#include <time.h>
 
 #define BITS_PER_LONG (sizeof(long) * 8)
 #define NBITS(x) ((((x)-1) / BITS_PER_LONG) + 1)
@@ -40,6 +41,15 @@ FFBStatus initFFB(FFBState *state, FFBEmulationType type, char *serialPath)
     state->effectCount = 0;
     memset(state->effectIds, -1, sizeof(state->effectIds));
     memset(state->eventPath, 0, sizeof(state->eventPath));
+    
+    // Initialize emulation fields
+    state->emulationMode = 0;
+    state->lastCommandTime = 0;
+    state->currentPosition = 0;
+    state->targetPosition = 0;
+    state->motorStatus = 0;
+    memset(state->lastCommand, 0, sizeof(state->lastCommand));
+    state->lastCommandLength = 0;
     
     // Initialize command queue
     state->commandQueue.head = 0;
@@ -82,6 +92,9 @@ FFBStatus bindController(FFBState *state, int controller)
         if (state->eventFd < 0)
         {
             debug(1, "FFB: Could not open event device %s: %s\n", state->eventPath, strerror(errno));
+            // Enable emulation mode for controllers without FFB support
+            state->emulationMode = 1;
+            debug(0, "FFB: Enabling emulation mode for controller %d (no FFB hardware)\n", controller);
             return FFB_STATUS_SUCCESS; // Not an error - controller just doesn't support FFB
         }
         
@@ -91,6 +104,7 @@ FFBStatus bindController(FFBState *state, int controller)
         if (detectFFBCapabilities(state) == 0)
         {
             debug(0, "FFB: Controller %d supports force feedback\n", controller);
+            state->emulationMode = 0;
             if (state->hasRumble)
                 debug(1, "  - Rumble effects (gamepad/controller)\n");
             if (state->hasConstant)
@@ -100,6 +114,18 @@ FFBStatus bindController(FFBState *state, int controller)
             if (state->hasDamper)
                 debug(1, "  - Damper effects (friction)\n");
         }
+        else
+        {
+            // Enable emulation mode if no FFB capabilities detected
+            state->emulationMode = 1;
+            debug(0, "FFB: Enabling emulation mode for controller %d (no FFB capabilities)\n", controller);
+        }
+    }
+    else
+    {
+        // Enable emulation mode if no event device found
+        state->emulationMode = 1;
+        debug(0, "FFB: Enabling emulation mode for controller %d (no event device)\n", controller);
     }
 
     return FFB_STATUS_SUCCESS;
@@ -511,3 +537,162 @@ static void cleanupEffects(FFBState *state)
     state->effectCount = 0;
     debug(2, "FFB: Cleaned up all effects\n");
 }
+
+// Get current time in milliseconds
+static long getTimeMs(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
+}
+
+// Update emulated motor position based on time elapsed
+void updateEmulatedPosition(FFBState *state)
+{
+    if (!state->emulationMode)
+        return;
+    
+    long currentTime = getTimeMs();
+    long elapsed = currentTime - state->lastCommandTime;
+    
+    // Simulate gradual movement toward target position
+    // Rate: approximately 100 units per 100ms
+    if (state->currentPosition < state->targetPosition)
+    {
+        int delta = (elapsed * 100) / 100; // 100 units per 100ms
+        if (delta > 0)
+        {
+            state->currentPosition += delta;
+            if (state->currentPosition > state->targetPosition)
+                state->currentPosition = state->targetPosition;
+        }
+    }
+    else if (state->currentPosition > state->targetPosition)
+    {
+        int delta = (elapsed * 100) / 100;
+        if (delta > 0)
+        {
+            state->currentPosition -= delta;
+            if (state->currentPosition < state->targetPosition)
+                state->currentPosition = state->targetPosition;
+        }
+    }
+    
+    // Clamp position to valid range
+    if (state->currentPosition < -100)
+        state->currentPosition = -100;
+    if (state->currentPosition > 100)
+        state->currentPosition = 100;
+}
+
+// Track FFB command for emulation
+void trackFFBCommand(FFBState *state, const unsigned char *data, int length)
+{
+    if (!state || !data || length <= 0)
+        return;
+    
+    state->lastCommandTime = getTimeMs();
+    
+    // Store command data
+    if (length > (int)sizeof(state->lastCommand))
+        length = sizeof(state->lastCommand);
+    memcpy(state->lastCommand, data, length);
+    state->lastCommandLength = length;
+    
+    // Parse command to update target position
+    // NAMCO 0x31 format: [0x31] [direction/strength] [additional params...]
+    // SEGA format varies by command
+    if (length >= 2)
+    {
+        unsigned char cmd = data[0];
+        
+        if (cmd == 0x31) // NAMCO control command
+        {
+            // Parse direction from second byte
+            // Typically: 0x00 = center, < 0x80 = left, > 0x80 = right
+            unsigned char param = data[1];
+            
+            if (param == 0x00 || param == 0x80)
+            {
+                // Center position
+                state->targetPosition = 0;
+            }
+            else if (param < 0x80)
+            {
+                // Left direction
+                state->targetPosition = -50 - (param / 2);
+                if (state->targetPosition < -100)
+                    state->targetPosition = -100;
+            }
+            else
+            {
+                // Right direction
+                state->targetPosition = 50 + ((param - 0x80) / 2);
+                if (state->targetPosition > 100)
+                    state->targetPosition = 100;
+            }
+            
+            debug(2, "FFB: Emulation - parsed position target %d from command 0x%02X param 0x%02X\n", 
+                  state->targetPosition, cmd, param);
+        }
+        else if (cmd == 0x30) // NAMCO init command
+        {
+            // Reset to center
+            state->currentPosition = 0;
+            state->targetPosition = 0;
+            state->motorStatus = 0x00; // Ready
+            
+            debug(2, "FFB: Emulation - motor initialized\n");
+        }
+    }
+}
+
+// Get emulated motor status response
+int getEmulatedStatus(FFBState *state, unsigned char *response, int maxLen)
+{
+    if (!state || !response || maxLen < 5)
+        return 0;
+    
+    // Update position before generating status
+    updateEmulatedPosition(state);
+    
+    long currentTime = getTimeMs();
+    long timeSinceCommand = currentTime - state->lastCommandTime;
+    
+    // Generate NAMCO 0x32 status response format:
+    // Byte 0: REPORT_SUCCESS (0x01)
+    // Byte 1: Motor status flags (0x00 = ready, 0x01 = busy, 0x02 = error)
+    // Byte 2-3: Current position (16-bit signed, center = 0x8000)
+    // Byte 4: Torque/force level (0x00-0xFF)
+    
+    response[0] = 0x01; // REPORT_SUCCESS
+    
+    // Motor is busy if we're still moving to target
+    if (state->currentPosition != state->targetPosition && timeSinceCommand < 500)
+    {
+        response[1] = 0x01; // Busy
+    }
+    else
+    {
+        response[1] = 0x00; // Ready
+    }
+    
+    // Convert position (-100 to 100) to 16-bit value (0x0000 to 0xFFFF, center = 0x8000)
+    int position16 = 0x8000 + (state->currentPosition * 0x7FFF / 100);
+    if (position16 < 0)
+        position16 = 0;
+    if (position16 > 0xFFFF)
+        position16 = 0xFFFF;
+    
+    response[2] = (position16 >> 8) & 0xFF;  // High byte
+    response[3] = position16 & 0xFF;          // Low byte
+    
+    // Torque level - simulate some resistance
+    response[4] = 0x40; // Mid-level torque
+    
+    debug(2, "FFB: Emulation - status query returning position %d (0x%04X), status 0x%02X\n", 
+          state->currentPosition, position16, response[1]);
+    
+    return 5; // Return 5 bytes of status data
+}
+

@@ -24,7 +24,18 @@ void setFFBState(void *state)
 
 static void processFFBCommand(unsigned char *data, int length)
 {
-	if (!globalFFBState || !globalFFBState->hasFFB)
+	if (!globalFFBState)
+		return;
+	
+	// If in emulation mode, track the command for position simulation
+	if (globalFFBState->emulationMode)
+	{
+		trackFFBCommand(globalFFBState, data, length);
+		return;
+	}
+	
+	// For real FFB, process the command normally
+	if (!globalFFBState->hasFFB)
 		return;
 	
 	FFBCommand command;
@@ -742,17 +753,54 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			case 0x31: // FFB control
 			case 0x32: // FFB status
 			{
-				debug(2, "CMD_NAMCO_FFB - FFB sub-command 0x%02hhX\n", inputPacket.data[index + 1]);
+				unsigned char subCmd = inputPacket.data[index + 1];
+				debug(2, "CMD_NAMCO_FFB - FFB sub-command 0x%02hhX\n", subCmd);
 				
-				// Process FFB command
-				int ffbDataLen = inputPacket.length - index - 2;
-				if (ffbDataLen > 0)
+				// For 0x30 (init) and 0x31 (control), process the command
+				if (subCmd == 0x30 || subCmd == 0x31)
 				{
-					processFFBCommand(&inputPacket.data[index + 1], ffbDataLen + 1);
+					int ffbDataLen = inputPacket.length - index - 2;
+					if (ffbDataLen > 0)
+					{
+						processFFBCommand(&inputPacket.data[index + 1], ffbDataLen + 1);
+					}
+					
+					// Respond with success to indicate FFB support
+					outputPacket.data[outputPacket.length++] = 0x01; // FFB ready/OK
 				}
-				
-				// Respond with success to indicate FFB support
-				outputPacket.data[outputPacket.length++] = 0x01; // FFB ready/OK
+				// For 0x32 (status), return emulated status if in emulation mode
+				else if (subCmd == 0x32)
+				{
+					if (globalFFBState && globalFFBState->emulationMode)
+					{
+						// Return emulated motor status
+						unsigned char statusResponse[16];
+						int statusLen = getEmulatedStatus(globalFFBState, statusResponse, sizeof(statusResponse));
+						
+						if (statusLen > 0)
+						{
+							for (int i = 0; i < statusLen && outputPacket.length < JVS_MAX_PACKET_SIZE; i++)
+							{
+								outputPacket.data[outputPacket.length++] = statusResponse[i];
+							}
+						}
+						else
+						{
+							// Fallback: simple success response
+							outputPacket.data[outputPacket.length++] = 0x01;
+						}
+					}
+					else
+					{
+						// For real FFB or no FFB state, return simple success
+						outputPacket.data[outputPacket.length++] = 0x01;
+					}
+				}
+				else
+				{
+					// Unknown sub-command, return success anyway
+					outputPacket.data[outputPacket.length++] = 0x01;
+				}
 			}
 			break;
 
