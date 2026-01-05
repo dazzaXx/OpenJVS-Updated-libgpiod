@@ -19,7 +19,7 @@ static FFBState *globalFFBState = NULL;
 
 void setFFBState(void *state)
 {
-	globalFFBState = (FFBState *)state;
+	globalFFBState = state;
 }
 
 static void processFFBCommand(unsigned char *data, int length)

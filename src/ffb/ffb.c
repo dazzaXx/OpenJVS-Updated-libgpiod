@@ -217,7 +217,9 @@ void *ffbThread(void *_args)
 static int findEventDevice(int controllerFd, char *eventPath, size_t pathSize)
 {
     // Try to find the event device by checking /proc/self/fd/ symlinks
-    // This is a simplified approach - in production, you'd scan /sys/class/input
+    // NOTE: This is a simplified approach for single-controller setups.
+    // For multi-controller scenarios, proper device matching via sysfs
+    // or udev would be needed to ensure FFB binds to the correct controller.
     
     char fdPath[256];
     char linkPath[256];
@@ -415,10 +417,23 @@ static int uploadFFBEffect(FFBState *state, FFBCommand *command)
         return -1;
     }
     
-    // Store effect ID
+    // Store effect ID if there's room, otherwise replace oldest
     if (state->effectCount < FFB_MAX_EFFECTS)
     {
         state->effectIds[state->effectCount++] = effect.id;
+    }
+    else
+    {
+        // Cleanup oldest effect and replace it
+        debug(2, "FFB: Effect limit reached, replacing oldest effect\n");
+        ioctl(state->eventFd, EVIOCRMFF, state->effectIds[0]);
+        
+        // Shift all effects down and add new one at the end
+        for (int i = 0; i < FFB_MAX_EFFECTS - 1; i++)
+        {
+            state->effectIds[i] = state->effectIds[i + 1];
+        }
+        state->effectIds[FFB_MAX_EFFECTS - 1] = effect.id;
     }
     
     // Play the effect
