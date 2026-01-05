@@ -17,7 +17,7 @@ static unsigned long packetCounter = 0;
 #define FFB_POSITION_CENTER 0
 #define FFB_POSITION_LEFT -50
 #define FFB_POSITION_RIGHT 50
-#define FFB_POSITION_SCALE_FACTOR 327  // 0x7FFF / 100 ≈ 327.67, maps -100..100 to 16-bit range
+#define FFB_POSITION_SCALE_FACTOR (0x7FFF / 100)  // Maps -100..100 to 16-bit range (evaluates to 327)
 #define FFB_POSITION_16BIT_CENTER 0x8000
 
 /* FFB Emulation State */
@@ -697,7 +697,8 @@ JVSStatus processPacket(JVSIO *jvsIO)
 			case 0x31:
 			{
 				// Verify packet has enough data to read direction byte
-				if (index + 2 >= inputPacket.length) {
+				// Need at least index + 3 bytes (cmd byte at index+1, direction at index+2)
+				if (index + 3 > inputPacket.length) {
 					debug(0, "FFB: Error - command 0x31 packet too short\n");
 					break;
 				}
@@ -734,13 +735,18 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				outputPacket.length--;
 				
 				// Convert position (-100 to 100) to 16-bit (center = 0x8000)
-				// Clamp the calculation to prevent overflow
+				// Check for overflow before addition to prevent integer overflow
 				int scaledPosition = ffbEmulation.currentPosition * FFB_POSITION_SCALE_FACTOR;
-				int position16 = FFB_POSITION_16BIT_CENTER + scaledPosition;
+				int position16;
 				
-				// Clamp to valid 16-bit range to prevent overflow
-				if (position16 < 0) position16 = 0;
-				if (position16 > 0xFFFF) position16 = 0xFFFF;
+				// Clamp scaled position to prevent overflow when added to center
+				if (scaledPosition > (0xFFFF - FFB_POSITION_16BIT_CENTER)) {
+					position16 = 0xFFFF;
+				} else if (scaledPosition < -FFB_POSITION_16BIT_CENTER) {
+					position16 = 0;
+				} else {
+					position16 = FFB_POSITION_16BIT_CENTER + scaledPosition;
+				}
 				
 				// Build 5-byte response
 				outputPacket.data[outputPacket.length++] = 0x01; // REPORT_SUCCESS
