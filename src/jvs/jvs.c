@@ -32,7 +32,7 @@ static FFBEmulation ffbEmulation = {
     .emulationMode = 1,     // Always enable emulation for now
     .currentPosition = 0,    // Start at center
     .targetPosition = 0,
-    .motorReady = 0
+    .motorReady = 1         // Start ready to avoid motor errors
 };
 
 /**
@@ -722,8 +722,9 @@ JVSStatus processPacket(JVSIO *jvsIO)
 				debug(2, "FFB: Control command - direction 0x%02X, target position %d\n", 
 					direction, ffbEmulation.targetPosition);
 				
-				// Command has 1 additional parameter byte (direction)
-				size += 1;
+				// Command has variable length: direction byte + possible additional parameter
+				// When direction is 0x00 (center), only 1 param byte; otherwise 2 param bytes
+				size += (direction == 0x00) ? 1 : 2;
 				// Response already added (REPORT_SUCCESS)
 			}
 			break;
