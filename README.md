@@ -1,8 +1,10 @@
+![ModernJVS](https://socialify.git.ci/dazzaXx/ModernJVS/image?description=1&font=Source+Code+Pro&language=1&owner=1&pattern=Plus&theme=Dark)
+
 # ModernJVS
 
 ModernJVS is fork of OpenJVS, an emulator for I/O boards in arcade machines that use the JVS protocol. It requires a USB RS485 converter, or an official OpenJVS HAT.
 
-Updated to use libgpiod, with backwards-compatible support for the now deprecated sysfs. Optimized code and new features, as well as support to the Raspberry Pi 5.
+Updated to use libgpiod, with backwards-compatible support for the now deprecated sysfs. Optimized code and new features, as well as support for the Raspberry Pi 5.
 
 Updated using Github Copilot.
 
