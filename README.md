@@ -6,7 +6,7 @@ ModernJVS is fork of OpenJVS, an emulator for I/O boards in arcade machines that
 
 Updated to use libgpiod, with backwards-compatible support for the now deprecated sysfs. Optimized code and new features, as well as support for the Raspberry Pi 5.
 
-Updated using Github Copilot.
+Updated and maintained with help from Github Copilot.
 
 The following arcade boards are supported:
 
