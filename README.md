@@ -156,7 +156,7 @@ Set the `DEFAULT_GAME` line to match your game. Available profiles are in `/etc/
 
 ## Controller Deadzone Support
 
-With version 4.6.2, configurable deadzone can now be changed in the config for each player's controller. Only affects controllers with analog sticks as its main use is to eliminate stick drift.
+With version 4.6.2, deadzone is now configurable in the config for each player's controller. Only affects controllers with analog sticks as it's primarily used to eliminate stick drift.
 
 **Configuration:**
 ```
