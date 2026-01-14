@@ -64,10 +64,10 @@ ModernJVS provides two compatible I/O board profiles for Taiko:
 A complete game configuration profile has been created:
 - **File:** `/etc/modernjvs/games/taiko-no-tatsujin`
 - **Features:**
-  - Analog channel mappings for authentic drum input
-  - Digital button fallback for testing with standard controllers
+  - Analog channel mappings for authentic arcade drum hardware
+  - Digital button mappings for standard controllers (gamepads, arcade sticks, keyboard)
   - Dual-player support
-  - Comprehensive comments explaining the setup
+  - Comprehensive comments explaining both input methods
 
 ## Hardware Requirements
 
@@ -91,13 +91,14 @@ To use real Taiko arcade drums with ModernJVS:
    - ModernJVS reads analog values and transmits via JVS protocol
    - Standard RS485 connection to System 256 arcade board
 
-### For Testing with Standard Controllers
+### For Playing with Standard Controllers
 
-ModernJVS also supports digital button mapping as a fallback:
+ModernJVS fully supports digital button mapping for standard controllers:
 - **Don (center hits):** Face buttons (A/B) or D-pad Left/Right
 - **Ka (rim hits):** Shoulder buttons or D-pad Up/Down
-- Allows testing without actual drum hardware
-- Note: Digital mapping loses hit strength detection
+- Works with any USB gamepad, arcade stick, or keyboard
+- Provides an accessible way to play without specialized drum hardware
+- Note: Digital buttons don't detect hit strength like analog drums, but the game is fully playable
 
 ## Configuration Instructions
 
@@ -117,10 +118,15 @@ DEFAULT_GAME taiko-no-tatsujin
 
 ### 3. Connect Hardware
 
+**Basic Setup (Required):**
 - USB RS485 converter to Raspberry Pi
 - RS485 to System 256 arcade board (GND, A+, B-)
 - Optional: Sense line via GPIO 12
-- ADC or drum controller to Raspberry Pi (for analog inputs)
+- USB controller (gamepad, arcade stick, or keyboard)
+
+**For Arcade Drums (Optional):**
+- ADC hardware (e.g., MCP3008) or specialized drum controller (e.g., Taiko-256)
+- Connect drum sensors to analog inputs
 
 ### 4. Start Service
 
@@ -167,10 +173,10 @@ sudo systemctl status modernjvs
    - Include proper ADC, signal conditioning, and JVS output
    - Direct connection to System 256
 
-2. **Testing Progression:**
-   - Start with digital button mapping (standard controller)
+2. **Use Standard Controllers First:**
+   - Start with a USB gamepad or arcade stick for immediate playability
    - Verify JVS communication and basic game operation
-   - Add analog drum hardware once basic operation confirmed
+   - Add analog drum hardware later if desired for hit strength detection
 
 3. **Documentation:**
    - Reference Taiko-256 project for wiring diagrams
@@ -183,7 +189,7 @@ sudo systemctl status modernjvs
 
 ✅ **8 analog input channels** at 16-bit resolution  
 ✅ **Dual player support** with proper channel assignment  
-✅ **Digital button fallback** for testing  
+✅ **Standard controller support** for accessible gameplay  
 ✅ **JVS protocol compatibility** with System 256  
 ✅ **Complete configuration profiles** included  
 
@@ -196,13 +202,14 @@ sudo systemctl status modernjvs
 
 ### Next Steps for Users
 
-To actually use Taiko drums with ModernJVS:
+To use Taiko no Tatsujin with ModernJVS:
 
 1. Set up basic ModernJVS installation on Raspberry Pi
 2. Configure for `namco-taiko` I/O and `taiko-no-tatsujin` game
-3. For authentic drums: Add ADC hardware or use specialized drum controller
-4. For testing: Use standard USB gamepad with digital buttons
-5. Test with System 256 arcade board
+3. Connect your preferred input:
+   - **Standard controller**: Plug in USB gamepad, arcade stick, or keyboard - ready to play!
+   - **Arcade drums**: Add ADC hardware or use specialized drum controller (e.g., Taiko-256)
+4. Test with System 256 arcade board
 
 ### References
 

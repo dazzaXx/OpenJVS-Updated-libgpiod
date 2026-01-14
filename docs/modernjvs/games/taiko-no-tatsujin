@@ -1,16 +1,18 @@
 # Taiko no Tatsujin (Taiko Drum Master) - Namco System 256
 # Author: ModernJVS Contributors
 #
-# This game requires 8 analog input channels (4 per player drum)
+# This configuration supports both analog drum hardware and standard controllers
 # Each drum has 4 zones: Left Don (center), Right Don (center), Left Ka (rim), Right Ka (rim)
 #
-# ANALOG MAPPING (Recommended for authentic arcade experience):
+# ANALOG DRUM MAPPING (For authentic arcade drum hardware):
 # Player 1: Analog 0 = Left Don, Analog 1 = Right Don, Analog 2 = Left Ka, Analog 3 = Right Ka  
 # Player 2: Analog 4 = Left Don, Analog 5 = Right Don, Analog 6 = Left Ka, Analog 7 = Right Ka
+# Requires 8 analog input channels with ADC hardware (e.g., MCP3008 or Taiko-256 board)
 #
-# DIGITAL BUTTON ALTERNATIVE (Simplified - for testing or home use):
+# STANDARD CONTROLLER MAPPING (For gamepads, arcade sticks, or keyboard):
 # Don (center hits) = Face buttons (A, B) or Left/Right on D-pad
 # Ka (rim hits) = Shoulder buttons or Up/Down on D-pad
+# Fully playable with any standard USB controller - great for home setups!
 
 # System Buttons
 CONTROLLER_BUTTON_TEST CONTROLLER_1 BUTTON_TEST SYSTEM
@@ -26,7 +28,7 @@ CONTROLLER_ANALOGUE_Z CONTROLLER_1 ANALOGUE_3
 # Right Ka (rim, right side)
 CONTROLLER_ANALOGUE_R CONTROLLER_1 ANALOGUE_4
 
-# Player One - Digital Button Alternative
+# Player One - Digital Button Mapping (For standard controllers)
 CONTROLLER_BUTTON_START CONTROLLER_1 BUTTON_START PLAYER_1
 CONTROLLER_BUTTON_SERVICE CONTROLLER_1 BUTTON_SERVICE PLAYER_1
 CONTROLLER_BUTTON_COIN CONTROLLER_1 COIN PLAYER_1
@@ -51,7 +53,7 @@ CONTROLLER_ANALOGUE_Z CONTROLLER_2 ANALOGUE_7
 # Right Ka (rim, right side)
 CONTROLLER_ANALOGUE_R CONTROLLER_2 ANALOGUE_8
 
-# Player Two - Digital Button Alternative
+# Player Two - Digital Button Mapping (For standard controllers)
 CONTROLLER_BUTTON_START CONTROLLER_2 BUTTON_START PLAYER_2
 CONTROLLER_BUTTON_SERVICE CONTROLLER_2 BUTTON_SERVICE PLAYER_2
 CONTROLLER_BUTTON_COIN CONTROLLER_2 COIN PLAYER_2

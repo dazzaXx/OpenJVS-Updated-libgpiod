@@ -279,14 +279,18 @@ Use one of these I/O board configurations:
    DEFAULT_GAME taiko-no-tatsujin
    ```
 
-3. For authentic arcade drum hardware:
+3. **Choose your input method:**
+
+   **Option A: Authentic arcade drum hardware**
    - Connect drum sensor outputs to analog channels 0-7 via appropriate ADC interface
    - Each drum zone's piezo sensor should output to its corresponding analog channel
+   - Provides analog hit strength detection for the most accurate arcade experience
 
-4. For testing with standard controllers:
-   - The digital button mapping is provided as a fallback
+   **Option B: Standard controllers (gamepads, arcade sticks, keyboard)**
+   - Works with any USB controller out of the box
    - Don (center): Face buttons (A/B) or D-pad Left/Right
    - Ka (rim): Shoulder buttons or D-pad Up/Down
+   - Perfect for home play and accessible to everyone
 
 ### Technical Details
 
@@ -297,10 +301,8 @@ Use one of these I/O board configurations:
 
 ### Notes
 
-- Original arcade drums use piezo sensors that output analog voltage
-- The game uses analog values to detect hit strength and distinguish between Don (center) and Ka (rim) hits
-- For DIY builds, consider using projects like Taiko-256 or DonCon2040 that provide proper analog signal conditioning
-- Standard gamepads work but lack the nuanced hit detection of real drums
+- **Arcade drum hardware**: Original arcade drums use piezo sensors that output analog voltage, allowing the game to detect hit strength and distinguish between Don (center) and Ka (rim) hits. For DIY builds, consider using projects like Taiko-256 or DonCon2040 that provide proper analog signal conditioning.
+- **Standard controller support**: The game is fully playable with standard gamepads, arcade sticks, or keyboards using the digital button mappings. This provides an accessible way to play without specialized drum hardware.
 
 ## Additional Resources
 
